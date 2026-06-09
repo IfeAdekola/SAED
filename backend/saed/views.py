@@ -94,7 +94,7 @@ def user_payload(user):
 
 
 def program_payload(program):
-    approved_count = program.application_set.exclude(status="declined").count()
+    approved_count = program.application_set.filter(status="approved").count()
     return {
         "id": program.id,
         "title": program.title,
