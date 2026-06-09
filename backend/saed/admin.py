@@ -1,0 +1,131 @@
+from django.contrib import admin
+
+from .models import Application, Profile, Program
+
+
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "email",
+        "role",
+        "phone",
+        "nysc_state_code",
+        "state_of_deployment",
+        "is_active",
+    )
+    list_filter = ("role", "state_of_deployment", "user__is_active")
+    search_fields = (
+        "user__first_name",
+        "user__last_name",
+        "user__username",
+        "user__email",
+        "phone",
+        "nysc_state_code",
+        "state_of_deployment",
+    )
+    autocomplete_fields = ("user",)
+    list_select_related = ("user",)
+
+    @admin.display(ordering="user__email")
+    def email(self, profile):
+        return profile.user.email
+
+    @admin.display(boolean=True, ordering="user__is_active")
+    def is_active(self, profile):
+        return profile.user.is_active
+
+
+@admin.register(Program)
+class ProgramAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "category",
+        "duration_weeks",
+        "capacity",
+        "trainer_name",
+        "location",
+        "is_active",
+        "created_at",
+    )
+    list_filter = ("category", "is_active", "location")
+    search_fields = (
+        "title",
+        "description",
+        "trainer_name",
+        "location",
+    )
+    autocomplete_fields = ("trainer",)
+    list_select_related = ("trainer",)
+    readonly_fields = ("created_at",)
+    date_hierarchy = "created_at"
+
+
+@admin.register(Application)
+class ApplicationAdmin(admin.ModelAdmin):
+    list_display = (
+        "applicant",
+        "applicant_email",
+        "program",
+        "program_category",
+        "status",
+        "created_at",
+    )
+    list_filter = ("status", "program__category", "created_at")
+    search_fields = (
+        "applicant__first_name",
+        "applicant__last_name",
+        "applicant__username",
+        "applicant__email",
+        "program__title",
+        "motivation",
+    )
+    autocomplete_fields = ("applicant", "program")
+    list_select_related = ("applicant", "program")
+    readonly_fields = ("created_at",)
+    date_hierarchy = "created_at"
+    actions = ("mark_pending", "mark_approved", "mark_completed", "mark_declined")
+
+    @admin.display(ordering="applicant__email")
+    def applicant_email(self, application):
+        return application.applicant.email
+
+    @admin.display(ordering="program__category")
+    def program_category(self, application):
+        return application.program.get_category_display()
+
+    @admin.action(description="Mark selected applications as pending")
+    def mark_pending(self, request, queryset):
+        updated = queryset.exclude(status="completed").update(status="pending")
+        skipped = queryset.count() - updated
+        if skipped:
+            self.message_user(request, f"Skipped {skipped} completed application(s).")
+
+    @admin.action(description="Approve selected applications")
+    def mark_approved(self, request, queryset):
+        updated = queryset.exclude(status="completed").update(status="approved")
+        skipped = queryset.count() - updated
+        if skipped:
+            self.message_user(request, f"Skipped {skipped} completed application(s).")
+
+    @admin.action(description="Mark selected applications as completed")
+    def mark_completed(self, request, queryset):
+        # Only update those that are not already completed
+        updated = queryset.exclude(status="completed").update(status="completed")
+        skipped = queryset.count() - updated
+        if skipped:
+            self.message_user(request, f"Skipped {skipped} already-completed application(s).")
+
+    @admin.action(description="Decline selected applications")
+    def mark_declined(self, request, queryset):
+        updated = queryset.exclude(status="completed").update(status="declined")
+        skipped = queryset.count() - updated
+        if skipped:
+            self.message_user(request, f"Skipped {skipped} completed application(s).")
+
+    def get_readonly_fields(self, request, obj=None):
+        """Make the `status` field readonly for applications that are completed."""
+        readonly = list(self.readonly_fields)
+        if obj and getattr(obj, "status", None) == "completed":
+            readonly.append("status")
+        return readonly
