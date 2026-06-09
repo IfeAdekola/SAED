@@ -21,7 +21,9 @@ Separate documentation also exists inside each app folder:
 - Admin accounts still exist, but they use the same login form as every other user.
 - Only admins can create trainer accounts.
 - Admins cannot create new admin accounts from the user management screen or API.
-- Trainers and admins can manage programs and review applications.
+- Only admins can create new SAED programs. Trainers can update programs they are assigned to.
+- Trainers are auto-assigned to programs they should manage via the `trainer` link on the `Program` model.
+- Trainers and admins can manage applications for programs they are assigned to (admins see all programs).
 - Trainers and admins do not apply to programs or submit applications.
 - Trainers and admins use `/app/applications` to check student applications grouped by program.
 - Trainers and admins use `/app/programs` to view program details instead of applying.
@@ -38,6 +40,7 @@ SAED/
       settings.py
       urls.py
       wsgi.py
+    requirements.txt
     saed/
       management/
         commands/
@@ -46,6 +49,7 @@ SAED/
       migrations/
         0001_initial.py
         0002_alter_program_category.py
+        0003_program_trainer.py
         __init__.py
       __init__.py
       admin.py
@@ -73,6 +77,7 @@ SAED/
         CampActivities.jsx
         DarkToggle.jsx
         FloatingNav.jsx
+        PasswordInput.jsx
       data/
         activities.js
       lib/
@@ -80,6 +85,7 @@ SAED/
         auth.jsx
       pages/
         Activities.jsx
+        ActivityDetail.jsx
         Applications.jsx
         Dashboard.jsx
         Forgot.jsx
@@ -91,6 +97,9 @@ SAED/
         ProgramEditor.jsx
         Programs.jsx
         Signup.jsx
+        ManageApplications.test.jsx
+        ManageUsers.test.jsx
+        ProgramEditor.test.jsx
       index.js
       main.jsx
       styles.css
@@ -99,9 +108,7 @@ SAED/
     package-lock.json
   Changes.md
   documentation.md
-  DOCUMETATION.md
   README.md
-  requirements.txt
 ```
 
 ## Main Features
@@ -113,6 +120,7 @@ The public website introduces the SAED IMS platform and gives users access to:
 - Home page
 - SAED program browsing
 - Camp activities
+- Individual activity detail page (`/activities/:id`)
 - Opportunities
 - Login
 - Signup
@@ -130,7 +138,7 @@ Supported roles are:
 
 Corps members can sign up publicly. Trainers are created by admins. Admin accounts are operational accounts and are not created from public signup or trainer management.
 
-Password fields include an eye button for showing or hiding the typed password on login, signup, password reset, and trainer creation forms.
+Password fields include an eye button for showing or hiding the typed password on login, signup, password reset, and trainer creation forms. The implementation lives in `frontend/src/components/PasswordInput.jsx` and is reused across forms.
 
 ### Dashboard
 
@@ -142,6 +150,7 @@ Authenticated users can access the protected dashboard at `/app`. The dashboard 
 - Completed applications
 - Featured programs
 - Recent applications
+- For trainers: the programs they are assigned to and the applications for each
 
 Admin and trainer dashboards include broader application data. Corps member dashboards focus on the current user's applications.
 
@@ -155,12 +164,14 @@ Users can view active SAED programs. Programs include:
 - Duration
 - Capacity
 - Available slots
-- Trainer name
+- Trainer name (display) and assigned trainer account (link)
 - Location
 
 The frontend supports searching programs and filtering them by grouped categories such as technology, business, agriculture, creative, and vocational.
 
 For corps members, program cards show `Apply Now` or `Applied`. For admins and trainers inside the app, program cards show `View Details`; the details dialog displays duration, capacity, available slots, trainer, location, and active status.
+
+`availableSlots` is computed by the backend as `capacity - approved applications` and is never negative.
 
 ### Program Applications
 
@@ -170,24 +181,26 @@ Application statuses are:
 
 - Pending
 - Approved
-- Completed
+- Completed (immutable)
 - Declined
 
 For corps members, the applications page allows users to view submitted applications and track each status. For admins and trainers, `/app/applications` is a student application checking page that lists applications grouped and sorted by program.
+
+Once an application is marked `completed`, only an admin can change its status. Trainers (and other non-admin staff) are blocked by the API, and the Django admin UI renders the `status` field readonly for completed records. On the frontend, trainers see the action buttons on `/app/manage-applications` disabled for completed applications, while admins can still approve, decline, or re-mark a completed application.
 
 ### Management
 
 Admins and trainers can:
 
-- Create and edit SAED programs
-- Activate or deactivate programs
-- Review applications
+- Review applications for programs they are assigned to
 - Approve, decline, or complete applications
 - View student applications grouped by program from `/app/applications`
 - View program details from `/app/programs`
 
-Admins can also:
+Admins can additionally:
 
+- Create and edit SAED programs (only admins can create; trainers can update programs they are assigned to)
+- Activate or deactivate programs
 - Create trainer accounts
 - Activate or deactivate user access
 
@@ -195,7 +208,7 @@ Admins cannot create another admin account through the user management API, and 
 
 ### Camp Activities
 
-The activities page displays NYSC orientation camp activity information, including registration, swearing-in, morning meditation, SAED activities, sports, social activities, intra-platoon activities, religious activities, and passing out parade.
+The activities page displays NYSC orientation camp activity information, including registration, swearing-in, morning meditation, SAED activities, sports, social activities, intra-platoon activities, religious activities, and passing out parade. Each activity has a dedicated detail page at `/activities/:id`.
 
 ### Opportunities
 
@@ -203,7 +216,7 @@ The opportunities page lists useful external opportunities for corps members, in
 
 ### Theme Support
 
-The frontend supports light and dark mode. The selected theme is stored in local storage, and the app also checks the system color scheme when no saved preference exists.
+The frontend supports light and dark mode. The selected theme is stored in local storage, and the app also checks the system color scheme when no saved preference exists. The initial theme is applied before React mounts to prevent a flash of the wrong theme on hard refresh.
 
 ## Backend Documentation
 
@@ -224,8 +237,10 @@ The frontend supports light and dark mode. The selected theme is stored in local
 - `backend/saed/urls.py`: API route declarations.
 - `backend/saed/admin.py`: Django admin registrations for profiles, programs, and applications.
 - `backend/saed/tests.py`: Backend API tests.
-- `backend/saed/management/commands/seed_saed.py`: Demo users and sample SAED programs.
+- `backend/saed/management/commands/seed_saed.py`: Demo users and sample SAED programs. Restores the demo admin/trainer accounts and assigns the demo trainer to every seeded program.
+- `backend/saed/management/commands/fix_program_categories.py`: One-off command to align historical program category values with the current choices. Dry-run by default; pass `--apply` to save the suggested updates.
 - `backend/documentation.md`: Backend-only documentation.
+- `backend/requirements.txt`: Python dependencies (Django + django-cors-headers).
 
 ### Data Models
 
@@ -252,7 +267,8 @@ Fields:
 - `description`
 - `duration_weeks`
 - `capacity`
-- `trainer_name`
+- `trainer`: foreign key to the Django `User` account assigned to run the program (nullable, set to `NULL` if the user is deleted)
+- `trainer_name`: display name for the trainer (kept in sync when `trainer` is set; can also be set standalone for legacy programs)
 - `location`
 - `is_active`
 - `created_at`
@@ -284,7 +300,7 @@ Fields:
 - `motivation`
 - `created_at`
 
-Each user can only apply once to the same program.
+Each user can only apply once to the same program. Once an application's status becomes `completed`, it is final.
 
 ### API Endpoints
 
@@ -298,27 +314,27 @@ All backend API routes are under `/api/`.
 | `/api/auth/login/` | POST | Public | Logs in a user with email and password. |
 | `/api/auth/logout/` | POST | Authenticated | Logs out the current user. |
 | `/api/auth/signup/` | POST | Public | Creates a corps member account and profile. |
-| `/api/auth/password-reset/` | POST | Public | Requests a password reset payload. |
+| `/api/auth/password-reset/` | POST | Public | Requests a password reset payload (uid/token). |
 | `/api/auth/password-reset/confirm/` | POST | Public | Confirms a password reset. |
-| `/api/dashboard/` | GET | Authenticated | Returns dashboard statistics, featured programs, and recent applications. |
-| `/api/programs/` | GET | Public | Returns active SAED programs. |
-| `/api/applications/` | GET | Authenticated | Returns applications for the logged-in user. |
+| `/api/dashboard/` | GET | Authenticated | Returns dashboard statistics, featured programs, recent applications, and (for trainers) their assigned programs. |
+| `/api/programs/` | GET | Public | Returns active SAED programs and the list of category choices. |
+| `/api/applications/` | GET | Corps Member | Returns applications submitted by the logged-in user. |
 | `/api/applications/create/` | POST | Corps Member | Creates an application for a program. Trainers and admins are rejected. |
-| `/api/manage/users/` | GET | Admin | Lists users. |
+| `/api/manage/users/` | GET | Admin | Lists all users. |
 | `/api/manage/users/` | POST | Admin | Creates a trainer account only. |
-| `/api/manage/users/<id>/` | PATCH | Admin | Updates profile fields, corps member/trainer role, or active status. |
-| `/api/manage/programs/` | GET | Admin/Trainer | Lists all programs. |
-| `/api/manage/programs/` | POST | Admin/Trainer | Creates a program. |
-| `/api/manage/programs/<id>/` | PATCH | Admin/Trainer | Updates a program. |
-| `/api/manage/applications/` | GET | Admin/Trainer | Lists all applications. |
-| `/api/manage/applications/<id>/` | PATCH | Admin/Trainer | Updates application status. |
+| `/api/manage/users/<id>/` | PATCH | Admin | Updates profile fields, corps member/trainer role, or active status. Self role changes and self deactivation are blocked. |
+| `/api/manage/programs/` | GET | Admin/Trainer | Lists programs (admins see all; trainers see only their assigned programs). Response also includes `trainers` (active trainer users) and `categories`. |
+| `/api/manage/programs/` | POST | Admin | Creates a program. Trainers are rejected. |
+| `/api/manage/programs/<id>/` | PATCH | Admin/Trainer | Updates a program. Trainers can only update their assigned programs. |
+| `/api/manage/applications/` | GET | Admin/Trainer | Lists applications (admins see all; trainers see only their assigned programs). |
+| `/api/manage/applications/<id>/` | PATCH | Admin/Trainer | Updates application status. Trainers cannot modify a `completed` application; admins can. |
 
 ### Backend Commands
 
-Install Python dependencies from the project root:
+Install Python dependencies from the project root (the requirements file lives at `backend/requirements.txt`):
 
 ```powershell
-.\backend\venv\Scripts\python.exe -m pip install -r requirements.txt
+.\backend\venv\Scripts\python.exe -m pip install -r backend\requirements.txt
 ```
 
 Run database migrations:
@@ -339,7 +355,7 @@ Seed demo users and programs:
 .\backend\venv\Scripts\python.exe backend\manage.py seed_saed
 ```
 
-The seed command resets the demo admin and trainer passwords to `password123`, restores their expected roles, and ensures both demo accounts are active.
+The seed command resets the demo admin and trainer passwords to `password123`, restores their expected roles, ensures both demo accounts are active, and assigns the demo trainer to every seeded program.
 
 Run Django checks:
 
@@ -392,11 +408,14 @@ http://127.0.0.1:8002/api/
 - `frontend/src/lib/auth.jsx`: Auth context, session loading, login, signup, logout, and password reset helpers.
 - `frontend/src/components/AppShell.jsx`: Authenticated app layout and navigation.
 - `frontend/src/components/PasswordInput.jsx`: Reusable password field with an eye button for showing or hiding typed passwords.
+- `frontend/src/components/CampActivities.jsx`: Reusable camp activities grid used by the public `/activities` page.
+- `frontend/src/data/activities.js`: Static metadata (id, title, description, hero image, optional image gallery, optional `exploreHref` CTA) for each camp activity. Activities are referenced by `id` from the route `/activities/:id`.
 - `frontend/src/pages/Login.jsx`: Shared login form for all account types. No admin sign-in selector is shown.
 - `frontend/src/pages/Signup.jsx`: Corps member signup flow.
 - `frontend/src/pages/ManageUsers.jsx`: Admin-only trainer account creation and user activation management.
-- `frontend/src/pages/ProgramEditor.jsx`: Admin/trainer program management.
-- `frontend/src/pages/ManageApplications.jsx`: Admin/trainer application review.
+- `frontend/src/pages/ProgramEditor.jsx`: Admin-only program management (create + edit).
+- `frontend/src/pages/ManageApplications.jsx`: Admin/trainer application review with status filters. For trainers the action buttons are disabled for applications already marked `completed`; admins can still approve, decline, or re-mark a completed application.
+- `frontend/src/pages/ActivityDetail.jsx`: Dedicated detail page for a single camp activity.
 - `frontend/documentation.md`: Frontend-only documentation.
 
 The API wrapper clears rotated CSRF tokens after login, signup, and logout. It also retries one time when Django returns a CSRF-specific `403`, which prevents stale `X-CSRFToken` headers after authentication changes.
@@ -413,16 +432,17 @@ The frontend uses `HashRouter`, so browser URLs may include `#/`.
 | --- | --- | --- |
 | `/` | Public | Home page. |
 | `/activities` | Public | Camp activities page. |
+| `/activities/:id` | Public | Detail page for a single camp activity. |
 | `/opportunities` | Public | Opportunities page. |
 | `/forgot` | Public | Forgot password page. |
 | `/login` | Public | Email/password login page. |
 | `/signup` | Public | Corps member signup page. |
 | `/programs` | Public | Public program browsing page. |
 | `/app` | Protected | User dashboard. |
-| `/app/programs` | Protected | Program browsing with application actions. |
-| `/app/applications` | Protected | Corps member application tracking; admin/trainer student application checking grouped by program. |
-| `/app/manage-applications` | Admin/Trainer | Application review page. |
-| `/app/program-editor` | Admin/Trainer | Program management page. |
+| `/app/programs` | Protected | Program browsing with application actions (corps member) or detail viewing (admin/trainer). |
+| `/app/applications` | Corps Member | Application tracking. |
+| `/app/manage-applications` | Admin/Trainer | Application review page with status filters. |
+| `/app/program-editor` | Admin | Program creation and editing. |
 | `/app/users` | Admin | Trainer account management page. |
 
 ### Frontend Commands
@@ -495,6 +515,8 @@ Email: admin@saed.test
 Password: password123
 ```
 
+The seed command also assigns the demo trainer to every seeded program, so logging in as the trainer immediately surfaces all seeded programs on the dashboard and application views.
+
 Corps members can create their own accounts from the signup page.
 
 ## Typical Local Development Workflow
@@ -525,6 +547,11 @@ Corps members can create their own accounts from the signup page.
   - `/app/applications` shows student applications grouped by program for admin and trainer users.
   - Application status PATCH requests do not fail with stale CSRF headers after login.
   - Trainer cannot access `/app/users`.
+  - Trainer cannot access `/app/program-editor`.
+  - Trainers see only their assigned programs in `/app/programs` and `/app/applications`.
+  - A trainer cannot change the status of a completed application through the API; an admin can.
+  - On `/app/manage-applications`, the action buttons for a completed row are disabled for trainers and enabled for admins (only the redundant `Complete` button stays disabled).
+  - `/activities/:id` opens a dedicated detail page for the matching camp activity.
   - Corps member can sign up, browse programs, apply, and view applications.
 
 ## Current Progress
@@ -549,6 +576,12 @@ Completed work:
 16. Prevented admin self-deactivation and self-role changes.
 17. Added password visibility eye buttons.
 18. Updated the seed command to reactivate and restore demo admin/trainer accounts.
+19. Linked programs to trainer accounts via the `Program.trainer` foreign key and updated the seed command to assign the demo trainer to every seeded program.
+20. Restricted program creation to admins and scoped trainer views to their assigned programs.
+21. Made completed applications immutable in the API, the Django admin, and the frontend review page.
+22. Added a dedicated camp activity detail page and route that renders the activity's hero image, description, image gallery, and (where applicable) an `Explore Programs` CTA from `src/data/activities.js`.
+23. Added frontend test files for `ManageApplications`, `ManageUsers`, and `ProgramEditor`.
+24. Changed the `completed` application rule so that only admins can change a completed application. Trainers are blocked by the API and the frontend (`/app/manage-applications`); admins can still approve, decline, or re-mark a completed application.
 
 ## Production Notes
 

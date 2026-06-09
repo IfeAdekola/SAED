@@ -2,6 +2,7 @@ import { CheckCircle2, CircleSlash, FileCheck2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { useAuth } from "../lib/auth.jsx";
 import { api } from "../lib/api.js";
 
 const actions = [
@@ -12,6 +13,7 @@ const actions = [
 
 export default function ManageApplications() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [applications, setApplications] = useState([]);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,17 @@ export default function ManageApplications() {
       })
       .finally(() => setLoading(false));
   }, [navigate]);
+
+  // Completed applications can only be changed by an admin. Trainers see
+  // read-only action buttons, while admins can still approve, decline, or
+  // re-mark the application as completed.
+  const isAdmin = user?.role === "admin";
+
+  function isActionDisabled(item, status) {
+    if (item.status === status) return true;
+    if (item.status === "completed" && !isAdmin) return true;
+    return false;
+  }
 
   async function updateStatus(id, status) {
     setMessage("");
@@ -89,7 +102,7 @@ export default function ManageApplications() {
                 {actions.map(([status, label, Icon, btnClass]) => (
                   <button
                     className={btnClass}
-                    disabled={item.status === status || item.status === "completed"}
+                    disabled={isActionDisabled(item, status)}
                     key={status}
                     onClick={() => updateStatus(item.id, status)}
                     title={label}

@@ -550,11 +550,13 @@ def manage_application_detail(request, application_id):
     except Application.DoesNotExist:
         return JsonResponse({"error": "Application not found."}, status=404)
 
-    # Once an application has been completed, its status should be immutable.
-    if application.status == "completed":
+    # Completed applications can only be changed by admins. Trainers (and any
+    # other non-admin role) are blocked so that completion is effectively final
+    # for staff except when an admin explicitly overrides it.
+    if application.status == "completed" and role_for(request.user) != "admin":
         return validation_error(
-            "Cannot change status of a completed application.",
-            {"status": "Completed applications cannot be modified."},
+            "Only admins can change the status of a completed application.",
+            {"status": "Completed applications can only be modified by an admin."},
         )
 
     application.status = status

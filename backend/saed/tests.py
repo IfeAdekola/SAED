@@ -268,3 +268,33 @@ class SaedApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.member.refresh_from_db()
         self.assertTrue(self.member.check_password("NewPassword123!"))
+
+    def test_trainer_cannot_change_completed_application(self):
+        self.application.status = "completed"
+        self.application.save(update_fields=["status"])
+
+        client = self.login(self.trainer)
+        response = patch_json(
+            client,
+            f"/api/manage/applications/{self.application.id}/",
+            {"status": "approved"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, "completed")
+
+    def test_admin_can_change_completed_application(self):
+        self.application.status = "completed"
+        self.application.save(update_fields=["status"])
+
+        client = self.login(self.admin)
+        response = patch_json(
+            client,
+            f"/api/manage/applications/{self.application.id}/",
+            {"status": "approved"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, "approved")

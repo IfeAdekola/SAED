@@ -39,6 +39,7 @@ frontend/
       CampActivities.jsx
       DarkToggle.jsx
       FloatingNav.jsx
+      PasswordInput.jsx
     data/
       activities.js
     lib/
@@ -46,6 +47,7 @@ frontend/
       auth.jsx
     pages/
       Activities.jsx
+      ActivityDetail.jsx
       Applications.jsx
       Dashboard.jsx
       Forgot.jsx
@@ -57,6 +59,9 @@ frontend/
       ProgramEditor.jsx
       Programs.jsx
       Signup.jsx
+      ManageApplications.test.jsx
+      ManageUsers.test.jsx
+      ProgramEditor.test.jsx
     index.js
     main.jsx
     styles.css
@@ -68,18 +73,26 @@ frontend/
 
 ## Important Files
 
-- `src/main.jsx`: App entry point, routes, protected route wrapper, and theme initialization.
+- `src/main.jsx`: App entry point, routes, protected route wrapper, and theme initialization (theme is applied before React mounts to prevent a flash of the wrong theme on hard refresh).
 - `src/lib/api.js`: Fetch wrapper for API requests. It prefers the same-origin `/api` proxy in development, clears cached CSRF tokens after auth changes, and retries once on CSRF-specific `403` responses.
 - `src/lib/auth.jsx`: Auth context, session loading, login, signup, logout, and password reset helpers.
-- `src/components/AppShell.jsx`: Authenticated app layout and navigation.
-- `src/components/PasswordInput.jsx`: Reusable password input with an eye button for showing or hiding typed passwords.
+- `src/components/AppShell.jsx`: Authenticated app layout and navigation. The sidebar collapses into a hamburger menu on small screens.
+- `src/components/PasswordInput.jsx`: Reusable password input with an eye button for showing or hiding typed passwords. Used by login, signup, password reset, and trainer creation forms.
+- `src/components/CampActivities.jsx`: Reusable camp activities grid used by the public `/activities` page.
+- `src/data/activities.js`: Static metadata (id, title, description, hero image, optional image gallery, optional `exploreHref` CTA) for each camp activity. Activities are referenced by `id` from the route `/activities/:id`.
+- `src/pages/Home.jsx`: Public landing page.
+- `src/pages/Activities.jsx`: Public camp activities listing.
+- `src/pages/ActivityDetail.jsx`: Public detail page for a single camp activity.
+- `src/pages/Opportunities.jsx`: Public opportunities page.
+- `src/pages/Forgot.jsx`: Public password reset page.
 - `src/pages/Login.jsx`: Shared login form for all account types. No admin sign-in selector is shown.
 - `src/pages/Signup.jsx`: Corps member signup flow.
-- `src/pages/ManageUsers.jsx`: Admin-only trainer account creation and user activation management.
-- `src/pages/Applications.jsx`: Corps member application tracking; admin/trainer student application checking grouped by program.
-- `src/pages/Programs.jsx`: Public and protected program browsing. Corps members can apply; admins/trainers view details.
-- `src/pages/ProgramEditor.jsx`: Admin/trainer program management with a compact sticky desktop form.
-- `src/pages/ManageApplications.jsx`: Admin/trainer application review.
+- `src/pages/Dashboard.jsx`: Authenticated dashboard. Trainers also see a `trainerPrograms` section listing the programs they are assigned to and their applications.
+- `src/pages/Programs.jsx`: Public and protected program browsing. Corps members can apply; admins/trainers view details. Trainers only see their assigned programs.
+- `src/pages/Applications.jsx`: Corps member application tracking.
+- `src/pages/ManageApplications.jsx`: Admin/trainer application review with status filters. For trainers the action buttons are disabled for applications already marked `completed`; admins can still approve, decline, or re-mark a completed application. Relevant CSS classes: `.filter-row`, `.filter-buttons`, `.filter-buttons button.active`, and `.icon-action[disabled]`.
+- `src/pages/ProgramEditor.jsx`: Admin-only program management (create + edit). Uses a compact sticky form on desktop.
+- `src/pages/ManageUsers.jsx`: Admin-only trainer account creation and user activation management. The current admin's own deactivate and role-change actions are disabled.
 - `src/styles.css`: Main styling for public pages, auth pages, dashboards, forms, tables, and responsive behavior.
 
 The authenticated app navigation collapses into a hamburger menu on smaller screens. This prevents the sidebar links from overflowing horizontally.
@@ -93,17 +106,18 @@ The frontend uses `HashRouter`, so browser URLs use hash fragments such as `/#/a
 | Route | Access | Purpose |
 | --- | --- | --- |
 | `/` | Public | Home page. |
-| `/activities` | Public | Camp activities page. |
+| `/activities` | Public | Camp activities listing. |
+| `/activities/:id` | Public | Detail page for a single camp activity. |
 | `/opportunities` | Public | Opportunities page. |
 | `/forgot` | Public | Password reset page. |
 | `/login` | Public | Email/password login for all roles. |
 | `/signup` | Public | Corps member signup. |
 | `/programs` | Public | Public program browsing. |
 | `/app` | Authenticated | Dashboard. |
-| `/app/programs` | Authenticated | Corps member application actions; admin/trainer program detail viewing. |
-| `/app/applications` | Authenticated | Corps member application tracking; admin/trainer student application checking grouped by program. |
-| `/app/manage-applications` | Admin/Trainer | Review applications. |
-| `/app/program-editor` | Admin/Trainer | Create and edit programs. |
+| `/app/programs` | Authenticated | Corps member application actions; admin/trainer program detail viewing. Trainers only see their assigned programs. |
+| `/app/applications` | Corps Member | Application tracking. |
+| `/app/manage-applications` | Admin/Trainer | Review applications, with status filters (All, Pending, Approved, Declined, Completed). |
+| `/app/program-editor` | Admin | Create and edit programs. Trainers are not allowed. |
 | `/app/users` | Admin | Create trainer accounts and manage access. |
 
 ## Auth Flow
@@ -115,20 +129,26 @@ The frontend uses `HashRouter`, so browser URLs use hash fragments such as `/#/a
 5. The frontend hides the Users link unless the current user's role is `admin`.
 6. Admin and trainer users do not submit applications from the frontend.
 7. Protected pages redirect unauthenticated users to `/login`.
+8. The route guard also redirects to `/login` (or the role's home) when a logged-in user lacks the required role for a page (for example, a trainer visiting `/app/users` or `/app/program-editor`).
 
 ## Role-Based Screens
 
 - Corps members see `Apply Now` on `/app/programs` and can submit applications.
 - Admins and trainers see `View Details` on `/app/programs`; the details modal shows duration, capacity, available slots, trainer, location, and active status.
+- Trainers only see programs they are assigned to on `/app/programs`, `/app/applications`, and the dashboard.
 - Corps members use `/app/applications` to track their own applications.
-- Admins and trainers use `/app/applications` as `Student Apps`, with applications sorted and grouped by program.
 - Admins and trainers use `/app/manage-applications` to review student applications. The page includes filter buttons (All, Pending, Approved, Declined, Completed) for quick filtering; action buttons are disabled for applications already marked `completed` to enforce immutability. Relevant CSS classes: `.filter-row`, `.filter-buttons`, `.filter-buttons button.active`, and `.icon-action[disabled]`.
+- Trainers see their assigned programs on the dashboard under a `trainerPrograms` section, including the applications for each program.
 - Admins use `/app/users` to create trainers and manage access.
-- The current admin's own deactivate action is disabled in `/app/users`.
+- The current admin's own deactivate action and role-change action are disabled in `/app/users`.
 
 ## Program Editor Layout
 
-`/app/program-editor` uses a fixed-height desktop panel. The program list can scroll, while the creation/edit form is compact and sticky so it fits inside the app viewport without internal form scrolling. On smaller screens, the layout becomes normal vertical flow.
+`/app/program-editor` is admin-only. It uses a fixed-height desktop panel. The program list can scroll, while the creation/edit form is compact and sticky so it fits inside the app viewport without internal form scrolling. On smaller screens, the layout becomes normal vertical flow. When a trainer is selected in the form, the API keeps the program in sync with the trainer account.
+
+## Activity Detail Page
+
+`/activities/:id` opens a dedicated page for a single camp activity. The page renders the activity's hero image, full description, and (when available) an image gallery and an `exploreHref` CTA, sourced from `src/data/activities.js`. Unknown activity ids fall back to a friendly "Activity not found" panel with a link back to `/activities`.
 
 ## API Proxy
 
@@ -165,6 +185,8 @@ cd frontend
 npm test
 ```
 
+The test runner is configured to not watch (`react-scripts test --watchAll=false`).
+
 Build production frontend:
 
 ```powershell
@@ -187,16 +209,20 @@ http://127.0.0.1:3001/
 - Admin cannot deactivate their own account from `/app/users`.
 - Authenticated navigation is collapsible with a hamburger on small screens.
 - Trainer cannot access `/app/users`.
+- Trainer cannot access `/app/program-editor` (route guard redirects to the dashboard).
 - Admin/trainer sees `View Details` instead of `Apply Now` on `/app/programs`.
 - Admin/trainer cannot submit program applications.
-- Admin/trainer sees student applications grouped by program on `/app/applications`.
+- Trainers only see their assigned programs on `/app/programs`, the dashboard, and `/app/applications`.
+- Trainers see assigned programs and their applications on the dashboard.
+- Admin/trainer can review applications in `/app/manage-applications` and use the status filter buttons.
+- A completed application is read-only: the action buttons on `/app/manage-applications` are disabled.
+- Admin can create and edit programs in `/app/program-editor` and assign a trainer from the dropdown.
 - Application review actions do not fail with stale CSRF after login.
 - Program editor form fits in the desktop viewport without scrolling the form.
 - Corps member can sign up from `/signup`.
 - Corps member can browse programs and apply.
 - User can view applications in `/app/applications`.
-- Admin/trainer can review applications in `/app/manage-applications`.
-- Admin/trainer can create and edit programs in `/app/program-editor`.
+- `/activities/:id` opens the detail page for the matching camp activity.
 
 ## Production Notes
 
