@@ -29,7 +29,7 @@ The platform supports corps member registration, SAED program browsing, applicat
 - Login, signup, and forgot password flows
 
 ### Authentication & Roles
-- Single email/password login form shared by all roles (no separate admin sign-in tab).
+- Single email/password login form shared by all roles.
 - Roles: `corps_member`, `trainer`, `admin`.
 - Corps members sign up publicly. Trainers are created by admins. Admin accounts are operational and not created from public signup or trainer management.
 - Password fields include a visibility eye button (login, signup, password reset, trainer creation).
