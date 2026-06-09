@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import activities from "../data/activities";
 
@@ -8,20 +8,6 @@ function truncateText(value, maxLength) {
 }
 
 export default function CampActivities() {
-  const [singleColumn, setSingleColumn] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia("(max-width: 600px)");
-
-    function update(event) {
-      setSingleColumn(event.matches);
-    }
-
-    update(query);
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-
   return (
     <section className="activities-section" id="activities">
       <div className="section-heading">
@@ -34,7 +20,13 @@ export default function CampActivities() {
             <img src={a.image} alt={a.title} />
             <div className="card-body">
               <h3>{a.title}</h3>
-              <p>{singleColumn ? truncateText(a.description, 200) : a.description}</p>
+              <p>{truncateText(a.description, 100)}</p>
+              <Link
+                className="primary-button activity-learn-more"
+                to={`/activities/${a.id}`}
+              >
+                Learn More
+              </Link>
             </div>
           </article>
         ))}

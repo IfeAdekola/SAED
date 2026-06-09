@@ -14,6 +14,7 @@ import ManageUsers from "./pages/ManageUsers.jsx";
 import ProgramEditor from "./pages/ProgramEditor.jsx";
 import Programs from "./pages/Programs.jsx";
 import Activities from "./pages/Activities.jsx";
+import ActivityDetail from "./pages/ActivityDetail.jsx";
 import Opportunities from "./pages/Opportunities.jsx";
 import Forgot from "./pages/Forgot.jsx";
 import Signup from "./pages/Signup.jsx";
@@ -54,6 +55,7 @@ createRoot(document.getElementById("root")).render(
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/activities" element={<Activities />} />
+          <Route path="/activities/:id" element={<ActivityDetail />} />
           <Route path="/opportunities" element={<Opportunities />} />
           <Route path="/forgot" element={<Forgot />} />
           <Route path="/login" element={<Login />} />
