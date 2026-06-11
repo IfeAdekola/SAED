@@ -1,4 +1,4 @@
-import { Search, X } from "lucide-react";
+import { Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useMatch, useNavigate } from "react-router-dom";
 
@@ -13,7 +13,7 @@ const categoryGroups = {
   business: ["education"],
   agriculture: ["agro_allied", "food_processing", "environment"],
   creative: ["beautification", "cosmetology", "culture_tourism", "film_photography"],
-  vocational: ["automobile", "construction"],
+  vocational: ["automobile", "construction", "beautification", "cosmetology", "film_photography", "agro_allied"],
 };
 
 function categoryGroupFor(programCategory) {
@@ -27,44 +27,20 @@ function categoryLabel(programCategory) {
 export default function Programs() {
   const navigate = useNavigate();
   const inApp = !!useMatch({ path: "/app/*" });
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const [programs, setPrograms] = useState([]);
-  const [applications, setApplications] = useState([]);
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
-  const [message, setMessage] = useState("");
-  const [selectedProgram, setSelectedProgram] = useState(null);
   const isTrainer = user?.role === "trainer";
-  const canManage = ["admin", "trainer"].includes(user?.role);
-  const staffProgramView = inApp && canManage;
-
-  async function load() {
-    const programData = await api(inApp && isTrainer ? "/manage/programs/" : "/programs/");
-    setPrograms(programData.programs);
-
-    if (!user) {
-      setApplications([]);
-      return;
-    }
-
-    try {
-      const endpoint = canManage ? "/manage/applications/" : "/applications/";
-      const applicationData = await api(endpoint);
-      setApplications(applicationData.applications);
-    } catch (err) {
-      if (err.status === 401) {
-        navigate("/login", { replace: true });
-        return;
-      }
-      setApplications([]);
-    }
-  }
 
   useEffect(() => {
+    async function load() {
+      const programData = await api(inApp && isTrainer ? "/manage/programs/" : "/programs/");
+      setPrograms(programData.programs);
+    }
     load();
-  }, [inApp, navigate, user, canManage, isTrainer]);
+  }, [inApp, isTrainer]);
 
-  const appliedProgramIds = new Set(applications.map((item) => item.program.id));
   const visiblePrograms = useMemo(
     () =>
       programs.filter((program) => {
@@ -77,49 +53,7 @@ export default function Programs() {
     [programs, category, query],
   );
 
-  async function apply(programId) {
-    if (authLoading) {
-      setMessage("Checking your account...");
-      return;
-    }
-
-    if (!user) {
-      navigate("/login", {
-        state: {
-          pendingProgramId: programId,
-          redirectTo: "/app",
-          role: "corps_member",
-        },
-      });
-      return;
-    }
-
-    setMessage("");
-    try {
-      await api("/applications/create/", {
-        method: "POST",
-        body: { programId, motivation: "I want to gain practical skills through SAED." },
-      });
-      await load();
-      setMessage("Application submitted.");
-      if (!inApp) {
-        navigate("/app");
-      }
-    } catch (err) {
-      if (err.status === 401) {
-        navigate("/login", {
-          state: {
-            pendingProgramId: programId,
-            redirectTo: "/app",
-            role: "corps_member",
-          },
-          replace: true,
-        });
-        return;
-      }
-      setMessage(err.message);
-    }
-  }
+  const detailsHref = (programId) => (inApp ? `/app/programs/${programId}` : `/programs/${programId}`);
 
   const content = (
     <section className="panel full-panel">
@@ -144,11 +78,8 @@ export default function Programs() {
         </div>
       </div>
 
-      {message && <div className="inline-message">{message}</div>}
-
       <div className="program-card-grid">
         {visiblePrograms.length ? visiblePrograms.map((program) => {
-          const applied = appliedProgramIds.has(program.id);
           return (
             <article className="program-card" key={program.id}>
               <span className="category-label">{categoryLabel(program.category)}</span>
@@ -162,11 +93,10 @@ export default function Programs() {
               </dl>
               <button
                 className="primary-button"
-                disabled={!staffProgramView && applied}
-                onClick={() => (staffProgramView ? setSelectedProgram(program) : apply(program.id))}
+                onClick={() => navigate(detailsHref(program.id))}
                 type="button"
               >
-                {staffProgramView ? "View Details" : applied ? "Applied" : "Apply Now"}
+                View Details
               </button>
             </article>
           );
@@ -176,65 +106,6 @@ export default function Programs() {
           </div>
         )}
       </div>
-
-      {selectedProgram ? (() => {
-        const programStudents = applications
-          .filter((item) => item.program.id === selectedProgram.id)
-          .map((item) => item.applicant);
-        return (
-          <div className="modal-backdrop" role="presentation" onClick={() => setSelectedProgram(null)}>
-            <article
-              className="detail-modal program-detail-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="program-detail-title"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="detail-modal-heading">
-                <div>
-                  <span className="category-label">{categoryLabel(selectedProgram.category)}</span>
-                  <h3 id="program-detail-title">{selectedProgram.title}</h3>
-                </div>
-                <button className="icon-action" onClick={() => setSelectedProgram(null)} type="button" aria-label="Close details">
-                  <X size={16} />
-                </button>
-              </div>
-              <p>{selectedProgram.description}</p>
-              <dl className="detail-list">
-                <div><dt>Duration</dt><dd>{selectedProgram.durationWeeks} weeks</dd></div>
-                <div><dt>Capacity</dt><dd>{selectedProgram.capacity}</dd></div>
-                <div><dt>Available slots</dt><dd>{selectedProgram.availableSlots}</dd></div>
-                <div><dt>Trainer</dt><dd>{selectedProgram.trainerName}</dd></div>
-                <div><dt>Location</dt><dd>{selectedProgram.location}</dd></div>
-                <div><dt>Status</dt><dd>{selectedProgram.isActive ? "Active" : "Inactive"}</dd></div>
-              </dl>
-              <section className="program-students">
-                <header className="program-students-heading">
-                  <h4>Enrolled Students</h4>
-                  <span className="program-students-count">
-                    {programStudents.length} {programStudents.length === 1 ? "student" : "students"}
-                  </span>
-                </header>
-                {programStudents.length ? (
-                  <ul className="program-students-list">
-                    {programStudents.map((student) => (
-                      <li className="program-student-item" key={student.id}>
-                        <div className="program-student-name">{student.fullName}</div>
-                        <div className="program-student-meta">
-                          <span>{student.email}</span>
-                          {student.phone ? <span>{" \u00b7 "}{student.phone}</span> : null}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="program-students-empty">No students have applied for this program yet.</p>
-                )}
-              </section>
-            </article>
-          </div>
-        );
-      })() : null}
     </section>
   );
 

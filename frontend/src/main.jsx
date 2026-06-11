@@ -13,6 +13,7 @@ import ManageApplications from "./pages/ManageApplications.jsx";
 import ManageUsers from "./pages/ManageUsers.jsx";
 import ProgramEditor from "./pages/ProgramEditor.jsx";
 import Programs from "./pages/Programs.jsx";
+import ProgramDetail from "./pages/ProgramDetail.jsx";
 import Activities from "./pages/Activities.jsx";
 import ActivityDetail from "./pages/ActivityDetail.jsx";
 import Opportunities from "./pages/Opportunities.jsx";
@@ -60,7 +61,8 @@ createRoot(document.getElementById("root")).render(
           <Route path="/forgot" element={<Forgot />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-            <Route path="/programs" element={<Programs />} />
+          <Route path="/programs" element={<Programs />} />
+          <Route path="/programs/:id" element={<ProgramDetail />} />
           <Route
             path="/app"
             element={
@@ -71,6 +73,7 @@ createRoot(document.getElementById("root")).render(
           >
             <Route index element={<Dashboard />} />
             <Route path="programs" element={<Programs />} />
+            <Route path="programs/:id" element={<ProgramDetail />} />
             <Route
               path="applications"
               element={
