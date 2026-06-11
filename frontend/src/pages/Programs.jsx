@@ -7,6 +7,12 @@ import FloatingNav from "../components/FloatingNav.jsx";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.jsx";
 
+function firstSentence(text) {
+  if (!text) return "";
+  const match = text.match(/^[^.]+\./);
+  return match ? match[0] : text.slice(0, 120) + (text.length > 120 ? "…" : "");
+}
+
 const categories = ["all", "technology", "business", "agriculture", "creative", "vocational"];
 const categoryGroups = {
   technology: ["ict", "power_energy"],
@@ -84,7 +90,7 @@ export default function Programs() {
             <article className="program-card" key={program.id}>
               <span className="category-label">{categoryLabel(program.category)}</span>
               <h3>{program.title}</h3>
-              <p>{program.description}</p>
+              <p>{firstSentence(program.description)}</p>
               <dl>
                 <div><dt>Duration</dt><dd>{program.durationWeeks} weeks</dd></div>
                 <div><dt>Location</dt><dd>{program.location}</dd></div>

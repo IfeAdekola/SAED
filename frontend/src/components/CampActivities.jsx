@@ -2,9 +2,10 @@ import { Link } from "react-router-dom";
 
 import activities from "../data/activities";
 
-function truncateText(value, maxLength) {
-  if (!value || value.length <= maxLength) return value;
-  return `${value.slice(0, maxLength).trim()}...`;
+function firstSentence(text) {
+  if (!text) return "";
+  const match = text.match(/^[^.]+\./);
+  return match ? match[0] : text.slice(0, 120) + (text.length > 120 ? "…" : "");
 }
 
 export default function CampActivities() {
@@ -20,7 +21,7 @@ export default function CampActivities() {
             <img src={a.image} alt={a.title} />
             <div className="card-body">
               <h3>{a.title}</h3>
-              <p>{truncateText(a.description, 100)}</p>
+              <p>{firstSentence(a.description)}</p>
               <Link
                 className="primary-button activity-learn-more"
                 to={`/activities/${a.id}`}

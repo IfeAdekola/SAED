@@ -955,6 +955,10 @@ span.status-pill,
   background: var(--surface-soft);
 }
 
+@media (max-width: 1100px) {
+  .opportunity-grid { grid-template-columns: 1fr 1fr; }
+}
+
 @media (max-width: 980px) {
   .feature-grid, .program-card-grid, .program-admin-grid, .stat-grid, .application-grid, .opportunity-grid, .management-form, .editor-form { grid-template-columns: 1fr 1fr; }
   .management-row { grid-template-columns: 1fr 1fr; }
@@ -1115,3 +1119,73 @@ span.status-pill,
 .activity-detail-footer { display: flex; justify-content: center; padding-top: 8px; }
 .activity-detail-footer .activity-explore-cta { align-self: center; }
 .detail-modal-footer { display: flex; justify-content: center; padding-top: 20px; margin-top: 8px; border-top: 1px solid var(--surface-border); }
+
+/* Responsive improvements for smaller screens */
+@media (max-width: 480px) {
+  .site-page { padding-top: 80px; }
+  .hero, .hero-overlay { min-height: 520px; }
+  .hero-overlay { padding: 100px 16px 40px; }
+  .hero h1 { font-size: 32px; }
+  .hero p { font-size: 15px; margin-bottom: 28px; }
+  .hero-actions { flex-direction: column; align-items: center; }
+  .hero-actions .primary-button,
+  .hero-actions .secondary-button { width: 100%; max-width: 280px; }
+  .stats-band { grid-template-columns: 1fr; gap: 16px; padding: 24px 16px; }
+  .feature-section { padding: 48px 16px 56px; }
+  .section-heading h2 { font-size: 26px; }
+  .activities-section { padding: 48px 16px 56px; }
+  .activity-card img { height: 140px; }
+  .activity-card .card-body { padding: 12px; }
+  .activity-learn-more { width: 100%; text-align: center; }
+  .program-detail-page { padding: 24px 16px; }
+  .detail-modal { padding: 16px; border-radius: 12px; }
+  .detail-list { grid-template-columns: 1fr; }
+  .detail-modal h3 { font-size: 20px; }
+  .auth-panel { padding: 20px; }
+  .opportunity-card, .application-card, .program-card { padding: 16px; }
+  .category-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .category-tabs button { flex: 0 0 auto; font-size: 13px; min-height: 34px; padding: 0 10px; }
+  .site-footer { padding: 24px 16px; font-size: 13px; }
+  .floating-nav { gap: 6px; padding: 8px 10px; min-height: 56px; }
+  .floating-nav .mini-logo img { width: 32px; height: 32px; }
+  .nav-button { padding: 0 12px; min-height: 36px; font-size: 13px; }
+  .theme-toggle { width: 36px; height: 36px; }
+  .icon-only { width: 36px; height: 36px; }
+  .back-home-link { padding: 6px 10px; font-size: 13px; }
+  .panel { padding: 16px; }
+  .program-toolbar { flex-direction: column; align-items: stretch; }
+  .search-box { width: 100%; }
+  .program-card dl div { flex-direction: column; gap: 4px; }
+  .program-card dd { text-align: left; }
+  .editor-layout { grid-template-columns: 1fr; }
+  .management-form { grid-template-columns: 1fr; }
+  .row-actions { flex-direction: column; align-items: stretch; }
+  .row-actions .primary-button,
+  .row-actions .danger-button { width: 100%; }
+  .activity-detail-hero img { height: 180px; }
+  .activity-detail-hero { padding: 16px; }
+  .activity-detail-section { gap: 20px; }
+  .program-detail-hero { padding: 16px; }
+  .program-detail-hero h1 { font-size: 24px; }
+  .program-detail-facts { grid-template-columns: 1fr; }
+  .program-students-list { max-height: 180px; }
+}
+
+/* ensure search box doesn't overflow its container */
+.search-box { max-width: 100%; }
+.search-box input { min-width: 0; }
+
+/* Ensure opportunity cards, application cards, etc shrink properly */
+.opportunity-card, .application-card, .program-card { word-wrap: break-word; overflow-wrap: break-word; }
+.opportunity-card p, .application-card p, .program-card p { word-wrap: break-word; overflow-wrap: break-word; }
+
+/* make sure the floated nav doesn't overflow on ultra-narrow screens */
+@media (max-width: 360px) {
+  .floating-nav { width: calc(100vw - 12px); padding: 6px 8px; gap: 4px; border-radius: 20px; }
+  .floating-nav .mini-logo { gap: 4px; }
+  .floating-nav .mini-logo span { font-size: 13px; }
+  .nav-actions { gap: 4px; }
+  .nav-actions .nav-button { padding: 0 8px; min-height: 32px; font-size: 12px; }
+  .theme-toggle { width: 32px; height: 32px; }
+  .icon-only { width: 32px; height: 32px; }
+}
