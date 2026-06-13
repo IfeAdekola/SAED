@@ -9,7 +9,7 @@ import PasswordInput from "../components/PasswordInput.jsx";
 
 export default function Login() {
   const location = useLocation();
-  const [form, setForm] = useState({ email: "", password: "", remember: false });
+  const [form, setForm] = useState({ email: "", password: "", role: "corps_member", remember: false });
   const [fields, setFields] = useState({});
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -55,6 +55,26 @@ export default function Login() {
       <Link className="back-link" to="/"><ArrowLeft size={16} /> Back</Link>
       <h1>Welcome Back</h1>
       <p>Login to access your account</p>
+      <div className="role-toggle" role="tablist" aria-label="Account type">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={form.role === "trainer"}
+          className={form.role === "trainer" ? "active" : ""}
+          onClick={() => setForm({ ...form, role: "trainer" })}
+        >
+          I'm a Trainer
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={form.role === "corps_member"}
+          className={form.role === "corps_member" ? "active" : ""}
+          onClick={() => setForm({ ...form, role: "corps_member" })}
+        >
+          I'm a Corps Member
+        </button>
+      </div>
       <form className="auth-form" onSubmit={handleSubmit}>
         <label>Email Address<input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Enter your Email Address" type="email" required /></label>
         {fields.email && <span className="field-error">{fields.email}</span>}
