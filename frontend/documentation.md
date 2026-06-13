@@ -78,22 +78,41 @@ frontend/
 - `src/lib/auth.jsx`: Auth context, session loading, login, signup, logout, and password reset helpers.
 - `src/components/AppShell.jsx`: Authenticated app layout and navigation. The sidebar collapses into a hamburger menu on small screens.
 - `src/components/PasswordInput.jsx`: Reusable password input with an eye button for showing or hiding typed passwords. Used by login, signup, password reset, and trainer creation forms.
-- `src/components/CampActivities.jsx`: Reusable camp activities grid used by the public `/activities` page.
+- `src/components/CampActivities.jsx`: Reusable camp activities grid used by the public `/activities` page. Cards show only the first sentence of descriptions.
 - `src/data/activities.js`: Static metadata (id, title, description, hero image, optional image gallery, optional `exploreHref` CTA) for each camp activity. Activities are referenced by `id` from the route `/activities/:id`.
 - `src/pages/Home.jsx`: Public landing page.
 - `src/pages/Activities.jsx`: Public camp activities listing.
 - `src/pages/ActivityDetail.jsx`: Public detail page for a single camp activity.
-- `src/pages/Opportunities.jsx`: Public opportunities page.
+- `src/pages/Opportunities.jsx`: Public opportunities page with 48 real NYSC listings from LinkedIn, MyJobMag, Jobberman, and company career pages. Cards show only the first sentence of each listing.
 - `src/pages/Forgot.jsx`: Public password reset page.
 - `src/pages/Login.jsx`: Shared login form for all account types. No admin sign-in selector is shown.
 - `src/pages/Signup.jsx`: Corps member signup flow.
 - `src/pages/Dashboard.jsx`: Authenticated dashboard. Trainers also see a `trainerPrograms` section listing the programs they are assigned to and their applications.
-- `src/pages/Programs.jsx`: Public and protected program browsing. Corps members can apply; admins/trainers view details. Trainers only see their assigned programs.
+- `src/pages/Programs.jsx`: Public and protected program browsing. Corps members can apply; admins/trainers view details. Trainers only see their assigned programs. Cards show only the first sentence of program descriptions.
 - `src/pages/Applications.jsx`: Corps member application tracking.
 - `src/pages/ManageApplications.jsx`: Admin/trainer application review with status filters. For trainers the action buttons are disabled for applications already marked `completed`; admins can still approve, decline, or re-mark a completed application. Relevant CSS classes: `.filter-row`, `.filter-buttons`, `.filter-buttons button.active`, and `.icon-action[disabled]`.
 - `src/pages/ProgramEditor.jsx`: Admin-only program management (create + edit). Uses a compact sticky form on desktop.
 - `src/pages/ManageUsers.jsx`: Admin-only trainer account creation and user activation management. The current admin's own deactivate and role-change actions are disabled.
-- `src/styles.css`: Main styling for public pages, auth pages, dashboards, forms, tables, and responsive behavior.
+- `src/styles.css`: Main styling for public pages, auth pages, dashboards, forms, tables, and comprehensive responsive behavior.
+
+### Responsive Design
+
+The site is fully responsive across all screen sizes (320px to desktop) with breakpoints at:
+
+- **1024px**: Program, activity, and opportunity grids reduce from 3 to 2 columns; opportunity image height reduced.
+- **768px**: Hero heading scales down; stats band stacks; activity/program detail grids become single-column; editor layout adjusts.
+- **680px**: FloatingNav collapses to hamburger; dashboard sidebar becomes a sticky top bar with hamburger toggle.
+- **480px**: Auth pages fill screen width; modal padding reduced; program editor stacks list/form vertically; forms and management rows become single-column.
+- **360px**: Ultra-compact padding and font sizes throughout; buttons stack vertically.
+
+Additional responsive features:
+
+- `@media (prefers-reduced-motion)`: Disables hover animations for accessibility.
+- `@media (orientation: landscape) and (max-height: 500px)`: Reduces hero height for landscape phones.
+- `@media print`: Hides navigation and non-essential UI for printing.
+- Category tabs scroll horizontally with `scroll-snap` on mobile instead of wrapping.
+- Dashboard sidebar becomes a sticky top bar with hamburger menu on mobile.
+- Dashboard stat cards use `minmax(180px, 1fr)` grid to prevent overflow on small screens.
 
 The authenticated app navigation collapses into a hamburger menu on smaller screens. This prevents the sidebar links from overflowing horizontally.
 
@@ -149,6 +168,14 @@ The frontend uses `HashRouter`, so browser URLs use hash fragments such as `/#/a
 ## Activity Detail Page
 
 `/activities/:id` opens a dedicated page for a single camp activity. The page renders the activity's hero image, full description, and (when available) an image gallery and an `exploreHref` CTA, sourced from `src/data/activities.js`. Unknown activity ids fall back to a friendly "Activity not found" panel with a link back to `/activities`.
+
+## Card Description Behavior
+
+All card-based pages (Programs, Opportunities, Camp Activities) display only the first sentence of descriptions using a `firstSentence()` helper that extracts text up to the first period. If no period is found, descriptions are truncated to 120 characters with an ellipsis. Full descriptions are shown on the respective detail pages: `/programs/:id`, `/activities/:id`, and external opportunity links.
+
+## Responsive Layout
+
+The entire site is fully responsive from 320px mobile to desktop. Responsive CSS is defined in `src/styles.css` with breakpoints at 1024px, 768px, 680px, 480px, and 360px. The dashboard sidebar becomes a sticky top bar on mobile with a hamburger toggle. Grids gracefully cascade from 3 columns to 2 to 1. Forms and management rows stack to single-column on narrow screens. The floating nav shrinks and collapses to a hamburger menu on small screens. A `prefers-reduced-motion` query disables hover animations for accessibility.
 
 ## API Proxy
 
@@ -223,6 +250,10 @@ http://127.0.0.1:3001/
 - Corps member can browse programs and apply.
 - User can view applications in `/app/applications`.
 - `/activities/:id` opens the detail page for the matching camp activity.
+- Program, opportunity, and activity cards show only the first sentence; full descriptions appear on detail pages.
+- Opportunities page displays 48 real NYSC listings with external application links.
+- Site is fully responsive from 320px to desktop; dashboard sidebar becomes a sticky top bar on mobile.
+- Hero background uses a CSS gradient (no external image dependency).
 
 ## Production Notes
 

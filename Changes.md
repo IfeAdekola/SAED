@@ -40,3 +40,37 @@ Implemented in this update:
 - Frontend (`frontend/src/pages/ManageApplications.jsx`): action buttons for completed applications are now only disabled for trainers; admins see the row's `Approve` and `Decline` buttons enabled (the redundant `Complete` button stays disabled because the row is already `completed`). The component reads the current role from `useAuth`.
 - Frontend tests (`frontend/src/pages/ManageApplications.test.jsx`): updated to mock `useAuth` and added two new tests covering the trainer-disabled and admin-enabled cases for completed applications.
 - Documentation: updated `documentation.md`, `backend/documentation.md`, and `frontend/documentation.md` to describe the new admin-override rule (Program Applications section, API table, `Application status rules`, `Role-Based Screens`, Testing Checklist, and Current Progress item 24).
+
+## 2026-06-13 — Card description truncation
+
+- Programs, Opportunities, and Camp Activities cards now show only the first sentence of descriptions.
+- Full descriptions are still available on the detail pages (`/programs/:id`, `/activities/:id`, and the external opportunity links).
+- A shared `firstSentence()` helper extracts the first sentence using a period-delimited regex; falls back to 120 characters with an ellipsis if no period is found.
+
+## 2026-06-13 — Real NYSC opportunity listings
+
+- Replaced the Opportunities page static data with 48 real, verified NYSC opportunity listings sourced from LinkedIn, MyJobMag, Jobberman, JobNow, NYSC Portal, and company career pages.
+- Listings cover entry-level positions, internships, graduate trainee programmes, and PPA opportunities across Lagos, Abuja, Port Harcourt, Benin City, Edo, and nationwide.
+- Sectors include tech/IT, finance/accounting, law, engineering/energy, professional services, marketing/sales, real estate, healthcare, oil & gas, and education.
+- Each listing links to the original job posting for direct application.
+
+## 2026-06-13 — Full site responsive redesign
+
+- Added comprehensive responsive CSS with breakpoints at 1024px, 768px, 480px, and 360px covering every page of the site.
+- **FloatingNav**: Shrinks on mobile, hamburger menu appears at ≤680px, ultra-compact layout at ≤360px.
+- **Hero section**: Stacks buttons vertically, reduces heading and padding on small screens, min-height scales from 700px down to 480px.
+- **Stats band**: 3 columns on desktop, single column on mobile.
+- **Feature/program/activity/opportunity grids**: Gracefully cascade from 3 columns to 2 to 1.
+- **Dashboard sidebar**: Becomes a sticky top bar with hamburger toggle on mobile.
+- **Forms and management rows**: Stack to single-column layouts on narrow screens.
+- **Modals**: Full-width with reduced padding on small screens.
+- **Auth pages**: Panel fills screen width on mobile with tighter padding.
+- **Activity detail and program detail**: Single-column layouts, reduced image heights, smaller fonts on mobile.
+- **Category tabs**: Horizontal scroll with snap on mobile instead of wrapping.
+- Added `prefers-reduced-motion` media query to disable hover animations for accessibility.
+- Added landscape phone and print media queries.
+- Fixed hero background image path (was referencing `../public/` which fails in CRA builds; replaced with a pure CSS gradient).
+
+## 2026-06-13 — Documentation update
+
+- Updated `README.md`, `documentation.md`, `frontend/documentation.md`, and `Changes.md` to reflect card truncation, real opportunity listings, responsive redesign, and hero image fix.

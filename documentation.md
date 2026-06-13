@@ -171,6 +171,8 @@ The frontend supports searching programs and filtering them by grouped categorie
 
 For corps members, program cards show `Apply Now` or `Applied`. For admins and trainers inside the app, program cards show `View Details`; the details dialog displays duration, capacity, available slots, trainer, location, and active status.
 
+All program, opportunity, and camp activity cards show only the first sentence of descriptions using a `firstSentence()` helper. Full descriptions are available on the respective detail pages (`/programs/:id`, `/activities/:id`, and external opportunity links).
+
 `availableSlots` is computed by the backend as `capacity - approved applications` and is never negative.
 
 ### Program Applications
@@ -212,7 +214,7 @@ The activities page displays NYSC orientation camp activity information, includi
 
 ### Opportunities
 
-The opportunities page lists useful external opportunities for corps members, including jobs, internships, grants, SAED resources, and youth development programmes.
+The opportunities page lists 48 real, verified NYSC opportunity listings sourced from LinkedIn, MyJobMag, Jobberman, JobNow, NYSC Portal, and company career pages. Listings cover entry-level positions, internships, graduate trainee programmes, and PPA opportunities across Lagos, Abuja, Port Harcourt, Benin City, Edo, and nationwide. Sectors include tech/IT, finance/accounting, law, engineering/energy, professional services, marketing/sales, real estate, healthcare, oil & gas, and education. Each listing links to the original job posting for direct application.
 
 ### Theme Support
 
@@ -399,7 +401,7 @@ http://127.0.0.1:8002/api/
 - Create React App / `react-scripts`
 - React Router with `HashRouter`
 - Lucide React icons
-- CSS for custom styling and responsive layout
+- Plain CSS with comprehensive responsive layout (breakpoints at 1024px, 768px, 480px, 360px)
 
 ### Important Frontend Files
 
@@ -408,7 +410,7 @@ http://127.0.0.1:8002/api/
 - `frontend/src/lib/auth.jsx`: Auth context, session loading, login, signup, logout, and password reset helpers.
 - `frontend/src/components/AppShell.jsx`: Authenticated app layout and navigation.
 - `frontend/src/components/PasswordInput.jsx`: Reusable password field with an eye button for showing or hiding typed passwords.
-- `frontend/src/components/CampActivities.jsx`: Reusable camp activities grid used by the public `/activities` page.
+- `frontend/src/components/CampActivities.jsx`: Reusable camp activities grid used by the public `/activities` page. Cards show only the first sentence of descriptions.
 - `frontend/src/data/activities.js`: Static metadata (id, title, description, hero image, optional image gallery, optional `exploreHref` CTA) for each camp activity. Activities are referenced by `id` from the route `/activities/:id`.
 - `frontend/src/pages/Login.jsx`: Shared login form for all account types. No admin sign-in selector is shown.
 - `frontend/src/pages/Signup.jsx`: Corps member signup flow.
@@ -582,6 +584,11 @@ Completed work:
 22. Added a dedicated camp activity detail page and route that renders the activity's hero image, description, image gallery, and (where applicable) an `Explore Programs` CTA from `src/data/activities.js`.
 23. Added frontend test files for `ManageApplications`, `ManageUsers`, and `ProgramEditor`.
 24. Changed the `completed` application rule so that only admins can change a completed application. Trainers are blocked by the API and the frontend (`/app/manage-applications`); admins can still approve, decline, or re-mark a completed application.
+25. Added first-sentence card truncation: program, opportunity, and camp activity cards show only the first sentence of descriptions; full descriptions are available on the respective detail pages.
+26. Replaced Opportunities page data with 48 real NYSC job, internship, and graduate trainee listings from LinkedIn, MyJobMag, Jobberman, and company career pages.
+27. Added comprehensive responsive CSS across breakpoints at 1024px, 768px, 480px, and 360px covering all pages (floating nav, hero, stats band, grids, dashboard sidebar, forms, modals, auth pages, and more).
+28. Fixed hero background image path (replaced broken `../public/` CSS reference with a pure CSS gradient).
+29. Added `prefers-reduced-motion`, landscape, and print media queries for accessibility.
 
 ## Production Notes
 
