@@ -116,7 +116,7 @@ const activities = [
     id: "passing-out",
     title: "Passing Out Parade",
     image: "/activities/passing-out.jpg",
-    description: "It is called camp (P.O.P.). It is always exciting as corps members are eager to proceed to their PPA after exiting the camp ground.",
+    description: "The Passing Out Parade (POP) marks the official completion of the mandatory one-year National Youth Service Corps (NYSC) program in Nigeria.",
     images: [
       "/activities/passing-out/1.jpg",
       "/activities/passing-out/2.jpg",

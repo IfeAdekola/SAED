@@ -7,7 +7,7 @@ The platform supports corps member registration, SAED program browsing, applicat
 ## Stack
 
 - Backend: Django 6, SQLite, session auth, django-cors-headers
-- Frontend: React 19, Create React App (react-scripts), React Router (HashRouter), lucide-react
+- Frontend: React 19, Create React App (react-scripts), React Router (HashRouter), lucide-react, plain CSS with responsive layout
 
 ## Repository Layout
 
@@ -22,17 +22,22 @@ The platform supports corps member registration, SAED program browsing, applicat
 ## Features
 
 ### Public Website
-- Home page
-- SAED program browsing
+- Home page with responsive gradient hero and stats band
+- SAED program browsing with category tabs and search
 - Camp activities listing and dedicated activity detail pages
-- Opportunities
+- 48 real NYSC opportunity listings sourced from LinkedIn, MyJobMag, Jobberman, and company career pages
 - Login, signup, and forgot password flows
+- Fully responsive layout from 320px mobile to desktop
 
 ### Authentication & Roles
 - Single email/password login form shared by all roles.
 - Roles: `corps_member`, `trainer`, `admin`.
 - Corps members sign up publicly. Trainers are created by admins. Admin accounts are operational and not created from public signup or trainer management.
 - Password fields include a visibility eye button (login, signup, password reset, trainer creation).
+
+### Card Description Behavior
+- Program, opportunity, and camp activity cards show only the first sentence of descriptions.
+- Full descriptions are displayed on the respective detail pages (`/programs/:id`, `/activities/:id`, and external opportunity links).
 
 ### Corps Member
 - Browse active SAED programs with search and category filters.
