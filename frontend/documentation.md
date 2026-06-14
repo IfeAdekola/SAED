@@ -40,8 +40,10 @@ frontend/
       DarkToggle.jsx
       FloatingNav.jsx
       PasswordInput.jsx
+      UnauthorizedPage.jsx
     data/
       activities.js
+      nigerianStates.js
     lib/
       api.js
       auth.jsx
@@ -59,6 +61,7 @@ frontend/
       ProgramEditor.jsx
       Programs.jsx
       Signup.jsx
+      TrainerSignup.jsx
       ManageApplications.test.jsx
       ManageUsers.test.jsx
       ProgramEditor.test.jsx
@@ -86,13 +89,16 @@ frontend/
 - `src/pages/Opportunities.jsx`: Public opportunities page with 48 real NYSC listings from LinkedIn, MyJobMag, Jobberman, and company career pages. Cards show only the first sentence of each listing.
 - `src/pages/Forgot.jsx`: Public password reset page.
 - `src/pages/Login.jsx`: Shared login form for all account types. No admin sign-in selector is shown.
-- `src/pages/Signup.jsx`: Corps member signup flow.
+- `src/pages/Signup.jsx`: Corps member signup flow with step-by-step registration including Nigerian state and LGA dropdowns.
+- `src/pages/TrainerSignup.jsx`: Trainer self-registration page.
 - `src/pages/Dashboard.jsx`: Authenticated dashboard. Trainers also see a `trainerPrograms` section listing the programs they are assigned to and their applications.
 - `src/pages/Programs.jsx`: Public and protected program browsing. Corps members can apply; admins/trainers view details. Trainers only see their assigned programs. Cards show only the first sentence of program descriptions.
 - `src/pages/Applications.jsx`: Corps member application tracking.
 - `src/pages/ManageApplications.jsx`: Admin/trainer application review with status filters. For trainers the action buttons are disabled for applications already marked `completed`; admins can still approve, decline, or re-mark a completed application. Relevant CSS classes: `.filter-row`, `.filter-buttons`, `.filter-buttons button.active`, and `.icon-action[disabled]`.
 - `src/pages/ProgramEditor.jsx`: Admin-only program management (create + edit). Uses a compact sticky form on desktop.
-- `src/pages/ManageUsers.jsx`: Admin-only trainer account creation and user activation management. The current admin's own deactivate and role-change actions are disabled.
+- `src/pages/ManageUsers.jsx`: Admin-only trainer account creation and user activation management. The current admin's own deactivate and role-change actions are disabled. Includes authorization status column and authorize/deauthorize toggle for trainers.
+- `src/components/UnauthorizedPage.jsx`: Full page unauthorized state with payment status and "Pay Authorization Fee" button (scaffolded for future Paystack integration).
+- `src/data/nigerianStates.js`: Complete dataset of all 37 Nigerian states and their 774 LGAs for the signup flow dropdowns.
 - `src/styles.css`: Main styling for public pages, auth pages, dashboards, forms, tables, and comprehensive responsive behavior.
 
 ### Responsive Design
@@ -130,25 +136,28 @@ The frontend uses `HashRouter`, so browser URLs use hash fragments such as `/#/a
 | `/opportunities` | Public | Opportunities page. |
 | `/forgot` | Public | Password reset page. |
 | `/login` | Public | Email/password login for all roles. |
-| `/signup` | Public | Corps member signup. |
+| `/signup` | Public | Corps member signup with step-by-step registration. |
+| `/trainer-signup` | Public | Trainer self-registration (requires admin authorization). |
 | `/programs` | Public | Public program browsing. |
 | `/app` | Authenticated | Dashboard. |
 | `/app/programs` | Authenticated | Corps member application actions; admin/trainer program detail viewing. Trainers only see their assigned programs. |
 | `/app/applications` | Corps Member | Application tracking. |
 | `/app/manage-applications` | Admin/Trainer | Review applications, with status filters (All, Pending, Approved, Declined, Completed). |
 | `/app/program-editor` | Admin | Create and edit programs. Trainers are not allowed. |
-| `/app/users` | Admin | Create trainer accounts and manage access. |
+| `/app/users` | Admin | Create trainer accounts, manage access, and authorize/deauthorize trainers. |
 
 ## Auth Flow
 
 1. The app calls `/api/auth/me/` on load to restore an existing Django session.
 2. Login posts email and password to `/api/auth/login/`.
-3. Signup creates corps member accounts only.
-4. Admin users access `/app/users` from the sidebar after logging in normally.
-5. The frontend hides the Users link unless the current user's role is `admin`.
-6. Admin and trainer users do not submit applications from the frontend.
-7. Protected pages redirect unauthenticated users to `/login`.
-8. The route guard also redirects to `/login` (or the role's home) when a logged-in user lacks the required role for a page (for example, a trainer visiting `/app/users` or `/app/program-editor`).
+3. Signup creates corps member accounts with step-by-step registration including Nigerian state and LGA dropdowns.
+4. Trainers can self-register at `/trainer-signup` but require admin authorization before accessing most features.
+5. Admin users access `/app/users` from the sidebar after logging in normally.
+6. The frontend hides the Users link unless the current user's role is `admin`.
+7. Admin and trainer users do not submit applications from the frontend.
+8. Protected pages redirect unauthenticated users to `/login`.
+9. The route guard also redirects to `/login` (or the role's home) when a logged-in user lacks the required role for a page (for example, a trainer visiting `/app/users` or `/app/program-editor`).
+10. Unauthorized trainers see a "Account Pending Authorization" page inside the app shell (sidebar remains visible).
 
 ## Role-Based Screens
 
@@ -158,8 +167,9 @@ The frontend uses `HashRouter`, so browser URLs use hash fragments such as `/#/a
 - Corps members use `/app/applications` to track their own applications.
 - Admins and trainers use `/app/manage-applications` to review student applications. The page includes filter buttons (All, Pending, Approved, Declined, Completed) for quick filtering; action buttons are disabled for applications already marked `completed` to enforce immutability. Relevant CSS classes: `.filter-row`, `.filter-buttons`, `.filter-buttons button.active`, and `.icon-action[disabled]`.
 - Trainers see their assigned programs on the dashboard under a `trainerPrograms` section, including the applications for each program.
-- Admins use `/app/users` to create trainers and manage access.
+- Admins use `/app/users` to create trainers, manage access, and authorize/deauthorize self-registered trainers. The page includes an authorization status column and an "Authorize" toggle button.
 - The current admin's own deactivate action and role-change action are disabled in `/app/users`.
+- Unauthorized trainers see a "Account Pending Authorization" page inside the app shell (sidebar remains visible) with payment status and a "Pay Authorization Fee" button (scaffolded).
 
 ## Program Editor Layout
 
@@ -246,7 +256,7 @@ http://127.0.0.1:3001/
 - Admin can create and edit programs in `/app/program-editor` and assign a trainer from the dropdown.
 - Application review actions do not fail with stale CSRF after login.
 - Program editor form fits in the desktop viewport without scrolling the form.
-- Corps member can sign up from `/signup`.
+- Corps member can sign up from `/signup` with step-by-step registration including state/LGA dropdowns and NYSC state code field.
 - Corps member can browse programs and apply.
 - User can view applications in `/app/applications`.
 - `/activities/:id` opens the detail page for the matching camp activity.
@@ -254,6 +264,10 @@ http://127.0.0.1:3001/
 - Opportunities page displays 48 real NYSC listings with external application links.
 - Site is fully responsive from 320px to desktop; dashboard sidebar becomes a sticky top bar on mobile.
 - Hero background uses a CSS gradient (no external image dependency).
+- Trainer can self-register at `/trainer-signup`.
+- Unauthorized trainer sees "Account Pending Authorization" page with payment status and "Pay Authorization Fee" button.
+- Admin can authorize/deauthorize trainers from `/app/users`.
+- Nigerian state and LGA dropdowns work correctly in signup flow.
 
 ## Production Notes
 

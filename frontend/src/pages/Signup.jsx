@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
 import { AuthFrame } from "./Login.jsx";
+import { STATES, NIGERIAN_STATES } from "../data/nigerianStates.js";
 
 export default function Signup() {
   const [step, setStep] = useState(1);
@@ -15,15 +16,25 @@ export default function Signup() {
     fullName: "",
     email: "",
     phone: "",
+    password: "",
+    stateOfOrigin: "",
     nyscStateCode: "",
     stateOfDeployment: "",
-    password: "",
+    lgaOfDeployment: "",
   });
   const { signup } = useAuth();
   const navigate = useNavigate();
 
+  const deploymentLgas = form.stateOfDeployment ? NIGERIAN_STATES[form.stateOfDeployment] || [] : [];
+
   function update(key, value) {
-    setForm({ ...form, [key]: value });
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      if (key === "stateOfDeployment") {
+        next.lgaOfDeployment = "";
+      }
+      return next;
+    });
   }
 
   async function handleSubmit(event) {
@@ -33,15 +44,17 @@ export default function Signup() {
       if (form.fullName.trim().split(/\s+/).length < 2) nextFields.fullName = "Enter first and last name.";
       if (!/^\S+@\S+\.\S+$/.test(form.email)) nextFields.email = "Enter a valid email address.";
       if (!form.phone.trim()) nextFields.phone = "Phone number is required.";
+      if (form.password.length < 8) nextFields.password = "Use at least 8 characters.";
       setFields(nextFields);
       if (Object.keys(nextFields).length) return;
       setStep(2);
       return;
     }
     const nextFields = {};
+    if (!form.stateOfOrigin) nextFields.stateOfOrigin = "Select your state of origin.";
     if (!form.nyscStateCode.trim()) nextFields.nyscStateCode = "NYSC state code is required.";
-    if (!form.stateOfDeployment.trim()) nextFields.stateOfDeployment = "State of deployment is required.";
-    if (form.password.length < 8) nextFields.password = "Use at least 8 characters.";
+    if (!form.stateOfDeployment) nextFields.stateOfDeployment = "Select your state of deployment.";
+    if (!form.lgaOfDeployment) nextFields.lgaOfDeployment = "Select your LGA of deployment.";
     setFields(nextFields);
     if (Object.keys(nextFields).length) return;
 
@@ -76,16 +89,41 @@ export default function Signup() {
             {fields.email && <span className="field-error">{fields.email}</span>}
             <label>Phone Number<input value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="Enter your phone number" required /></label>
             {fields.phone && <span className="field-error">{fields.phone}</span>}
+            <label>Password<PasswordInput value={form.password} onChange={(e) => update("password", e.target.value)} placeholder="Create a password" required minLength={8} /></label>
+            {fields.password && <span className="field-error">{fields.password}</span>}
             <button className="wide-button">Continue</button>
           </>
         ) : (
           <>
-            <label>NYSC State Code<input value={form.nyscStateCode} onChange={(e) => update("nyscStateCode", e.target.value)} placeholder="e.g. LA/23A/1234" required /></label>
+            <label>State of Origin
+              <select value={form.stateOfOrigin} onChange={(e) => update("stateOfOrigin", e.target.value)} required>
+                <option value="">Select your state</option>
+                {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </label>
+            {fields.stateOfOrigin && <span className="field-error">{fields.stateOfOrigin}</span>}
+            <label>NYSC State Code
+              <input value={form.nyscStateCode} onChange={(e) => update("nyscStateCode", e.target.value)} placeholder="Enter your NYSC state code" required />
+            </label>
             {fields.nyscStateCode && <span className="field-error">{fields.nyscStateCode}</span>}
-            <label>State of Deployment<input value={form.stateOfDeployment} onChange={(e) => update("stateOfDeployment", e.target.value)} placeholder="e.g. Lagos" required /></label>
+            <label>State of Deployment
+              <select value={form.stateOfDeployment} onChange={(e) => update("stateOfDeployment", e.target.value)} required>
+                <option value="">Select your state</option>
+                {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </label>
             {fields.stateOfDeployment && <span className="field-error">{fields.stateOfDeployment}</span>}
-            <label>Password<PasswordInput value={form.password} onChange={(e) => update("password", e.target.value)} placeholder="Create a password" required minLength={8} /></label>
-            {fields.password && <span className="field-error">{fields.password}</span>}
+            {form.stateOfDeployment && (
+              <>
+                <label>LGA of Deployment
+                  <select value={form.lgaOfDeployment} onChange={(e) => update("lgaOfDeployment", e.target.value)} required>
+                    <option value="">Select your LGA</option>
+                    {deploymentLgas.map((lga) => <option key={lga} value={lga}>{lga}</option>)}
+                  </select>
+                </label>
+                {fields.lgaOfDeployment && <span className="field-error">{fields.lgaOfDeployment}</span>}
+              </>
+            )}
             {error && <div className="form-error">{error}</div>}
             <button className="wide-button" disabled={submitting}>{submitting ? "Creating..." : "Create Account"}</button>
           </>

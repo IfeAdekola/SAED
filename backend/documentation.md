@@ -31,6 +31,8 @@ backend/
       0001_initial.py
       0002_alter_program_category.py
       0003_program_trainer.py
+      0004_profile_authorized_at_profile_has_paid_and_more.py
+      0005_profile_lga_of_deployment_profile_state_of_origin.py
       __init__.py
     __init__.py
     admin.py
@@ -70,6 +72,11 @@ Fields:
 - `phone`
 - `nysc_state_code`
 - `state_of_deployment`
+- `state_of_origin`: Nigerian state where the corps member is from (used in signup)
+- `lga_of_deployment`: Local Government Area of deployment (used in signup)
+- `is_authorized`: boolean indicating if a trainer account is authorized (default `False` for self-registered trainers, `True` for admin-created trainers)
+- `has_paid`: boolean indicating if the trainer has paid the authorization fee (scaffolded for future Paystack integration)
+- `authorized_at`: timestamp when the trainer was authorized by an admin
 
 ### Program
 
@@ -114,16 +121,17 @@ All backend routes are under `/api/`.
 | `/api/auth/login/` | POST | Public | Log in with email and password. |
 | `/api/auth/logout/` | POST | Authenticated | Log out current user. |
 | `/api/auth/signup/` | POST | Public | Create a corps member account. |
+| `/api/auth/trainer-signup/` | POST | Public | Create a trainer account (requires admin authorization). |
 | `/api/auth/password-reset/` | POST | Public | Request a password reset (returns uid/token for the requested email if it exists). |
 | `/api/auth/password-reset/confirm/` | POST | Public | Confirm password reset with uid/token. |
 | `/api/dashboard/` | GET | Authenticated | Return dashboard counts and recent data. For trainers the response also includes a `trainerPrograms` array (each with their nested `applications`). |
 | `/api/programs/` | GET | Public | Return active programs and the list of category choices. |
 | `/api/applications/` | GET | Corps Member | Return the current user's applications. Trainers and admins are rejected. |
 | `/api/applications/create/` | POST | Corps Member | Apply to a program. Trainer and admin accounts are rejected. |
-| `/api/manage/users/` | GET | Admin | List all users (with profile data, including role and active status). |
+| `/api/manage/users/` | GET | Admin | List all users (with profile data, including role, active status, and authorization status). |
 | `/api/manage/users/` | POST | Admin | Create a trainer account only. |
-| `/api/manage/users/<id>/` | PATCH | Admin | Update user profile fields, role to `corps_member`/`trainer`, or active status. Self role changes and self deactivation are blocked. |
-| `/api/manage/programs/` | GET | Admin/Trainer | List programs (admins see all; trainers see only programs they are assigned to). Response also includes `trainers` (active trainer users) and `categories`. |
+| `/api/manage/users/<id>/` | PATCH | Admin | Update user profile fields, role to `corps_member`/`trainer`, active status, or authorization status. Self role changes and self deactivation are blocked. |
+| `/api/manage/programs/` | GET | Admin/Trainer | List programs (admins see all; trainers see only programs they are assigned to). Response also includes `trainers` (authorized trainer users) and `categories`. |
 | `/api/manage/programs/` | POST | Admin | Create a program. Trainer accounts are rejected. |
 | `/api/manage/programs/<id>/` | PATCH | Admin/Trainer | Update a program. Trainers can only update programs they are assigned to. |
 | `/api/manage/applications/` | GET | Admin/Trainer | List all applications. Trainers see only applications for programs they are assigned to. |
@@ -158,11 +166,21 @@ All backend routes are under `/api/`.
 - The Django admin UI treats completed applications as immutable: admin bulk actions skip completed records and the `status` field is rendered readonly for completed applications.
 - The `completed` immutability rule is enforced both at the API and the Django admin layer, but only admins can override it via the API.
 
+## Django Admin
+
+The Django admin `ProfileAdmin` uses dynamic `get_fieldsets()` to show role-specific fields:
+
+- **Trainers**: Authorization section (`is_authorized`, `has_paid`, `authorized_at`)
+- **Corps Members**: Corps Member Details section (`state_of_origin`, `lga_of_deployment`)
+- **Admins**: Only basic fields (User Information, Contact, NYSC Details)
+
 ## Access Rules
 
 - Login accepts email and password only.
-- Public signup creates corps member accounts only.
+- Public signup creates corps member accounts with step-by-step registration including Nigerian state and LGA dropdowns.
+- Trainers can self-register at `/trainer-signup` but require admin authorization before accessing most features.
 - Admin users can create trainer accounts.
+- Admin users can authorize/deauthorize self-registered trainers from the user management screen.
 - Admin users cannot create another admin account through the API.
 - Admin users cannot deactivate their own account or change their own role through the API.
 - Trainers and admins can manage programs and applications.
@@ -171,6 +189,7 @@ All backend routes are under `/api/`.
 - Trainers and admins can list all submitted student applications through `/api/manage/applications/`.
 - Trainer accounts are auto-restored to the expected state by the `seed_saed` management command.
 - Corps members can apply to programs and view their own applications.
+- Unauthorized trainers see a "Account Pending Authorization" page with payment status and a "Pay Authorization Fee" button (scaffolded for future Paystack integration).
 
 ## CSRF Notes
 

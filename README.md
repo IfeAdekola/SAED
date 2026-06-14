@@ -32,7 +32,9 @@ The platform supports corps member registration, SAED program browsing, applicat
 ### Authentication & Roles
 - Single email/password login form shared by all roles.
 - Roles: `corps_member`, `trainer`, `admin`.
-- Corps members sign up publicly. Trainers are created by admins. Admin accounts are operational and not created from public signup or trainer management.
+- Corps members sign up publicly with step-by-step registration including Nigerian state and LGA dropdowns.
+- Trainers can self-register at `/trainer-signup` but require admin authorization before accessing most features.
+- Admin accounts are operational and not created from public signup or trainer management.
 - Password fields include a visibility eye button (login, signup, password reset, trainer creation).
 
 ### Card Description Behavior
@@ -45,22 +47,26 @@ The platform supports corps member registration, SAED program browsing, applicat
 - View their own applications at `/app/applications`.
 
 ### Trainer
+- Self-register at `/trainer-signup` (requires admin authorization before full access).
 - View program details (no apply) for programs they are assigned to.
 - Review applications for their assigned programs at `/app/manage-applications`.
 - **Cannot** change a `completed` application through the API or the frontend; the action buttons on completed rows are disabled.
 - Cannot create new programs, create new admins, or access `/app/users`.
+- Unauthorized trainers see a "Account Pending Authorization" page with payment status and a "Pay Authorization Fee" button (scaffolded for future Paystack integration).
 
 ### Admin
 - Everything trainers can do, across all programs.
 - Create and edit SAED programs (`/app/program-editor`), with trainer assignment.
 - Create and manage trainer accounts (`/app/users`).
+- Authorize/deauthorize self-registered trainers from the user management screen.
 - Approve, decline, complete, **and re-open** any application — admins are the only role that can change a `completed` application's status.
 
 ## Current Access Rules
 
-- Corps members sign up from the public signup page.
+- Corps members sign up from the public signup page with step-by-step registration (name, email, phone, password → state of origin, NYSC state code, state of deployment, LGA of deployment).
+- Trainers can self-register at `/trainer-signup` but require admin authorization before accessing most features.
 - All users log in with email and password only. There is no separate admin sign-in tab.
-- Only admins can create trainer accounts.
+- Admins can authorize/deauthorize trainers from the user management screen.
 - Admins cannot create new admin accounts from the user management screen or API.
 - Only admins can create new SAED programs. Trainers can update programs they are assigned to.
 - Trainers are auto-assigned to programs they should manage via the `trainer` link on the `Program` model.
@@ -71,6 +77,7 @@ The platform supports corps member registration, SAED program browsing, applicat
 - Admins cannot deactivate or change the role of their own active admin account.
 - Corps members can browse programs, apply, and track their own applications.
 - **Once an application is marked `completed`, only an admin can change its status.** Trainers are blocked by the API and the frontend; admins can still approve, decline, or re-mark a completed application.
+- Unauthorized trainers see a "Account Pending Authorization" page with payment status and a "Pay Authorization Fee" button (scaffolded for future Paystack integration).
 
 ## Run Locally
 
@@ -160,6 +167,7 @@ All routes live under `/api/`. Key endpoints:
 | `/api/health/` | GET | Public | Confirms the API is running. |
 | `/api/auth/login/` | POST | Public | Logs in with email and password. |
 | `/api/auth/signup/` | POST | Public | Creates a corps member account. |
+| `/api/auth/trainer-signup/` | POST | Public | Creates a trainer account (requires admin authorization). |
 | `/api/dashboard/` | GET | Authenticated | Returns counts, featured programs, and recent applications. |
 | `/api/programs/` | GET | Public | Lists active SAED programs and category choices. |
 | `/api/applications/create/` | POST | Corps Member | Apply to a program. |

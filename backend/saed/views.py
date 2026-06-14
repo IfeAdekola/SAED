@@ -107,6 +107,8 @@ def user_payload(user):
         "phone": profile.phone if profile else "",
         "nyscStateCode": profile.nysc_state_code if profile else "",
         "stateOfDeployment": profile.state_of_deployment if profile else "",
+        "stateOfOrigin": profile.state_of_origin if profile else "",
+        "lgaOfDeployment": profile.lga_of_deployment if profile else "",
         "isActive": user.is_active,
         "isAuthorized": profile.is_authorized if profile else False,
         "hasPaid": profile.has_paid if profile else False,
@@ -250,10 +252,12 @@ def signup_view(request):
     if role == "corps_member":
         if not data.get("phone", "").strip():
             fields["phone"] = "Phone number is required."
-        if not data.get("nyscStateCode", "").strip():
-            fields["nyscStateCode"] = "NYSC state code is required."
+        if not data.get("stateOfOrigin", "").strip():
+            fields["stateOfOrigin"] = "State of origin is required."
         if not data.get("stateOfDeployment", "").strip():
             fields["stateOfDeployment"] = "State of deployment is required."
+        if not data.get("lgaOfDeployment", "").strip():
+            fields["lgaOfDeployment"] = "LGA of deployment is required."
     try:
         validate_password(password)
     except ValidationError as exc:
@@ -279,6 +283,8 @@ def signup_view(request):
         phone=data.get("phone", "").strip(),
         nysc_state_code=data.get("nyscStateCode", "").strip(),
         state_of_deployment=data.get("stateOfDeployment", "").strip(),
+        state_of_origin=data.get("stateOfOrigin", "").strip(),
+        lga_of_deployment=data.get("lgaOfDeployment", "").strip(),
     )
     login(request, user)
     return JsonResponse({"user": user_payload(user)}, status=201)

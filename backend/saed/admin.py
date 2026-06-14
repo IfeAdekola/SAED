@@ -26,6 +26,24 @@ class ProfileAdmin(admin.ModelAdmin):
     )
     autocomplete_fields = ("user",)
     list_select_related = ("user",)
+    readonly_fields = ("authorized_at",)
+
+    def get_fieldsets(self, request, obj=None):
+        basic = [
+            ("User Information", {"fields": ("user", "role")}),
+            ("Contact", {"fields": ("phone",)}),
+            ("NYSC Details", {"fields": ("nysc_state_code", "state_of_deployment")}),
+        ]
+        if obj:
+            if obj.role == "trainer":
+                return basic + [
+                    ("Authorization", {"fields": ("is_authorized", "has_paid", "authorized_at")}),
+                ]
+            elif obj.role == "corps_member":
+                return basic + [
+                    ("Corps Member Details", {"fields": ("state_of_origin", "lga_of_deployment")}),
+                ]
+        return basic
 
     @admin.display(ordering="user__email")
     def email(self, profile):

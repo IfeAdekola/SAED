@@ -74,3 +74,37 @@ Implemented in this update:
 ## 2026-06-13 — Documentation update
 
 - Updated `README.md`, `documentation.md`, `frontend/documentation.md`, and `Changes.md` to reflect card truncation, real opportunity listings, responsive redesign, and hero image fix.
+
+## 2026-06-14 — Trainer self-registration & authorization flow
+
+- Added trainer self-registration at `/trainer-signup`. Trainers can now create their own accounts instead of being admin-created only.
+- New `Profile` fields: `is_authorized` (default `False` for self-registered trainers, `True` for admin-created trainers), `has_paid` (scaffolded for future Paystack integration), `authorized_at` (timestamp set when admin authorizes).
+- `require_authorized_trainer` decorator blocks unauthorized trainers from accessing dashboard, manage programs, manage applications, and manage application detail endpoints. Admins and corps members are unaffected.
+- `/api/auth/trainer-signup/` endpoint creates trainer accounts with `is_authorized=False`. Admin-created trainers via `/api/manage/users/` default to `is_authorized=True`.
+- `PATCH /api/manage/users/<id>/` now handles `isAuthorized` and `hasPaid` fields. Setting `isAuthorized=True` automatically records `authorized_at`.
+- `trainers_payload()` filters by `is_authorized=True` so only authorized trainers appear in the trainer dropdown for program assignment.
+- `user_payload()` returns `isAuthorized` and `hasPaid` fields.
+- Unauthorized trainers see a full "Account Pending Authorization" page inside the app shell (sidebar remains visible). The page shows payment status and a "Pay Authorization Fee" button (scaffolded — shows alert for now).
+- Admins can authorize/deauthorize trainers from `/app/users` with a new "Authorize" toggle button and authorization status column.
+- Added `UnauthorizedPage.jsx` component and `TrainerSignup.jsx` page.
+- Migration `0004` added `is_authorized`, `has_paid`, `authorized_at` to Profile. Migration `0005` added `state_of_origin` and `lga_of_deployment`.
+
+## 2026-06-14 — Corps member signup redesign
+
+- Moved password field from step 2 to step 1 of the corps member signup flow.
+- Replaced NYSC State Code text input with State of Origin dropdown (36 states + FCT).
+- Replaced State of Deployment text input with State of Deployment dropdown.
+- Added conditional LGA of Deployment dropdown that only appears after State of Deployment is selected, populated with the correct LGAs for the chosen state.
+- Created `frontend/src/data/nigerianStates.js` with complete dataset of all 37 Nigerian states and their 774 LGAs.
+- Backend `signup_view` validates and saves `stateOfOrigin`, `stateOfDeployment`, and `lgaOfDeDeployment` instead of `nyscStateCode`.
+- Added `state_of_origin` and `lga_of_deployment` fields to Profile model.
+- Added "Want to teach? Sign up as a Trainer" link on the corps member signup page.
+- `auth.jsx` now exposes `setUser` for direct user state updates from the trainer signup flow.
+
+## 2026-06-14 — NYSC state code field & admin fieldsets
+
+- Added NYSC State Code text input field to corps member signup form, positioned before State of Deployment.
+- Updated Django admin `ProfileAdmin` to use dynamic `get_fieldsets()` that shows role-specific fields:
+  - Trainers see: `is_authorized`, `has_paid`, `authorized_at` (Authorization section)
+  - Corps members see: `state_of_origin`, `lga_of_deployment` (Corps Member Details section)
+  - Admins see only basic fields (User Information, Contact, NYSC Details)
