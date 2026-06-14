@@ -17,6 +17,7 @@ export function AuthProvider({ children }) {
   const value = useMemo(
     () => ({
       user,
+      setUser,
       loading,
       async login(payload) {
         const data = await api("/auth/login/", { method: "POST", body: payload });

@@ -1,4 +1,4 @@
-import { Save, UserPlus } from "lucide-react";
+import { Save, UserPlus, ShieldCheck, ShieldOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -98,22 +98,43 @@ export default function ManageUsers() {
       {loading ? <div className="empty-state">Loading users...</div> : null}
       {!loading ? (
         <div className="management-table">
-          <div className="management-row table-head"><span>Name</span><span>Role</span><span>Status</span><span>Actions</span></div>
+          <div className="management-row table-head"><span>Name</span><span>Role</span><span>Status</span><span>Authorization</span><span>Actions</span></div>
           {users.map((user) => (
             <div className="management-row" key={user.id}>
               <div><strong>{user.fullName}</strong><span>{user.email}</span></div>
               <span>{user.role.replace("_", " ")}</span>
               <span className={`status-pill status-${user.isActive ? "approved" : "declined"}`}>{user.isActive ? "active" : "inactive"}</span>
-              <button
-                className="icon-action"
-                disabled={user.id === currentUser?.id}
-                onClick={() => updateUser(user, { isActive: !user.isActive })}
-                title={user.id === currentUser?.id ? "You cannot deactivate your own account" : undefined}
-                type="button"
-              >
-                <Save size={16} />
-                <span>{user.id === currentUser?.id ? "Current User" : user.isActive ? "Deactivate" : "Activate"}</span>
-              </button>
+              {user.role === "trainer" ? (
+                <span className={`status-pill status-${user.isAuthorized ? "approved" : "pending"}`}>
+                  {user.isAuthorized ? "authorized" : user.hasPaid ? "paid, pending" : "pending"}
+                </span>
+              ) : (
+                <span className="status-pill status-approved">n/a</span>
+              )}
+              <div className="action-buttons">
+                {user.role === "trainer" && (
+                  <button
+                    className="icon-action"
+                    disabled={user.id === currentUser?.id}
+                    onClick={() => updateUser(user, { isAuthorized: !user.isAuthorized })}
+                    title={user.isAuthorized ? "Deauthorize this trainer" : "Authorize this trainer"}
+                    type="button"
+                  >
+                    {user.isAuthorized ? <ShieldOff size={16} /> : <ShieldCheck size={16} />}
+                    <span>{user.isAuthorized ? "Deauthorize" : "Authorize"}</span>
+                  </button>
+                )}
+                <button
+                  className="icon-action"
+                  disabled={user.id === currentUser?.id}
+                  onClick={() => updateUser(user, { isActive: !user.isActive })}
+                  title={user.id === currentUser?.id ? "You cannot deactivate your own account" : undefined}
+                  type="button"
+                >
+                  <Save size={16} />
+                  <span>{user.id === currentUser?.id ? "Current User" : user.isActive ? "Deactivate" : "Activate"}</span>
+                </button>
+              </div>
             </div>
           ))}
         </div>

@@ -14,6 +14,9 @@ class Profile(models.Model):
     phone = models.CharField(max_length=32, blank=True)
     nysc_state_code = models.CharField(max_length=32, blank=True)
     state_of_deployment = models.CharField(max_length=80, blank=True)
+    is_authorized = models.BooleanField(default=False)
+    has_paid = models.BooleanField(default=False)
+    authorized_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} ({self.role})"

@@ -92,6 +92,7 @@ export default function Signup() {
         )}
       </form>
       <p className="auth-switch">Already have an account? <Link to="/login">Login</Link></p>
+      <p className="auth-switch trainer-switch">Want to teach? <Link to="/trainer-signup">Sign up as a Trainer</Link></p>
     </AuthFrame>
   );
 }

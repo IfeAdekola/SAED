@@ -5,6 +5,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.models import User
 from django.utils.crypto import get_random_string
+from django.utils.timezone import now
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
@@ -79,6 +80,23 @@ def clean_email(value):
     return email
 
 
+def is_authorized(user):
+    profile = getattr(user, "profile", None)
+    return profile.is_authorized if profile else False
+
+
+def require_authorized_trainer(view_func):
+    @api_login_required
+    def wrapper(request, *args, **kwargs):
+        if role_for(request.user) == "trainer" and not is_authorized(request.user):
+            return JsonResponse(
+                {"error": "Your account is pending authorization. Contact an administrator.", "authorized": False},
+                status=403,
+            )
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
 def user_payload(user):
     profile = getattr(user, "profile", None)
     return {
@@ -90,6 +108,8 @@ def user_payload(user):
         "nyscStateCode": profile.nysc_state_code if profile else "",
         "stateOfDeployment": profile.state_of_deployment if profile else "",
         "isActive": user.is_active,
+        "isAuthorized": profile.is_authorized if profile else False,
+        "hasPaid": profile.has_paid if profile else False,
     }
 
 
@@ -137,6 +157,7 @@ def trainers_payload():
     trainers = User.objects.select_related("profile").filter(
         is_active=True,
         profile__role="trainer",
+        profile__is_authorized=True,
     ).order_by("first_name", "last_name", "email")
     return [trainer_payload(user) for user in trainers]
 
@@ -259,6 +280,46 @@ def signup_view(request):
         nysc_state_code=data.get("nyscStateCode", "").strip(),
         state_of_deployment=data.get("stateOfDeployment", "").strip(),
     )
+    login(request, user)
+    return JsonResponse({"user": user_payload(user)}, status=201)
+
+
+@csrf_exempt
+@require_POST
+def trainer_signup_view(request):
+    data = read_json(request)
+    full_name = data.get("fullName", "").strip()
+    email = clean_email(data.get("email", ""))
+    password = data.get("password", "")
+    phone = data.get("phone", "").strip()
+    fields = {}
+
+    if len(full_name.split()) < 2:
+        fields["fullName"] = "Enter first and last name."
+    if not email:
+        fields["email"] = "Enter a valid email address."
+    if not phone:
+        fields["phone"] = "Phone number is required."
+    try:
+        validate_password(password)
+    except ValidationError as exc:
+        fields["password"] = " ".join(exc.messages)
+
+    if fields:
+        return validation_error("Please correct the highlighted fields.", fields)
+
+    try:
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password,
+            first_name=full_name.split(" ", 1)[0],
+            last_name=full_name.split(" ", 1)[1] if " " in full_name else "",
+        )
+    except IntegrityError:
+        return validation_error("An account with this email already exists.", {"email": "Email is already registered."})
+
+    Profile.objects.create(user=user, role="trainer", phone=phone, is_authorized=False, has_paid=False)
     login(request, user)
     return JsonResponse({"user": user_payload(user)}, status=201)
 
@@ -396,7 +457,7 @@ def manage_users(request):
     except IntegrityError:
         return validation_error("An account with this email already exists.", {"email": "Email is already registered."})
 
-    Profile.objects.create(user=user, role="trainer", phone=data.get("phone", "").strip())
+    Profile.objects.create(user=user, role="trainer", phone=data.get("phone", "").strip(), is_authorized=True)
     return JsonResponse({"user": user_payload(user)}, status=201)
 
 
@@ -432,6 +493,14 @@ def manage_user_detail(request, user_id):
         if user.id == request.user.id and not bool(data["isActive"]):
             return validation_error("You cannot deactivate your own admin account.", {"isActive": "Self deactivation is not allowed."})
         user.is_active = bool(data["isActive"])
+    if "isAuthorized" in data:
+        profile.is_authorized = bool(data["isAuthorized"])
+        if profile.is_authorized:
+            profile.authorized_at = now()
+        else:
+            profile.authorized_at = None
+    if "hasPaid" in data:
+        profile.has_paid = bool(data["hasPaid"])
 
     user.save()
     profile.save()
@@ -492,6 +561,7 @@ def apply_program_data(program, data):
 
 
 @require_roles("admin", "trainer")
+@require_authorized_trainer
 @require_http_methods(["GET", "POST"])
 @csrf_exempt
 def manage_programs(request):
@@ -530,6 +600,7 @@ def manage_program_detail(request, program_id):
 
 
 @require_roles("admin", "trainer")
+@require_authorized_trainer
 @require_http_methods(["GET"])
 def manage_applications(request):
     applications = managed_applications_for(request.user)
@@ -537,6 +608,7 @@ def manage_applications(request):
 
 
 @require_roles("admin", "trainer")
+@require_authorized_trainer
 @require_http_methods(["PATCH"])
 @csrf_exempt
 def manage_application_detail(request, application_id):
@@ -565,6 +637,7 @@ def manage_application_detail(request, application_id):
 
 
 @api_login_required
+@require_authorized_trainer
 def dashboard(request):
     user_role = role_for(request.user)
     programs = Program.objects.filter(is_active=True)

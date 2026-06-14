@@ -19,9 +19,9 @@ class SaedApiTests(TestCase):
         self.member = User.objects.create_user("member@example.com", "member@example.com", "Password123!")
         Profile.objects.create(user=self.member, role="corps_member", phone="0800")
         self.trainer = User.objects.create_user("trainer@example.com", "trainer@example.com", "Password123!")
-        Profile.objects.create(user=self.trainer, role="trainer")
+        Profile.objects.create(user=self.trainer, role="trainer", is_authorized=True)
         self.other_trainer = User.objects.create_user("other-trainer@example.com", "other-trainer@example.com", "Password123!")
-        Profile.objects.create(user=self.other_trainer, role="trainer")
+        Profile.objects.create(user=self.other_trainer, role="trainer", is_authorized=True)
         self.admin = User.objects.create_user("admin@example.com", "admin@example.com", "Password123!")
         Profile.objects.create(user=self.admin, role="admin")
         self.program = Program.objects.create(

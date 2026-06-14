@@ -4,6 +4,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../lib/auth.jsx";
 import DarkToggle from "./DarkToggle.jsx";
+import UnauthorizedPage from "../pages/UnauthorizedPage.jsx";
 
 export default function AppShell() {
   const { user, logout } = useAuth();
@@ -11,6 +12,7 @@ export default function AppShell() {
   const [navOpen, setNavOpen] = useState(false);
   const canManage = ["admin", "trainer"].includes(user?.role);
   const isAdmin = user?.role === "admin";
+  const isUnauthorizedTrainer = user?.role === "trainer" && !user?.isAuthorized;
 
   async function handleLogout() {
     await logout();
@@ -85,7 +87,7 @@ export default function AppShell() {
             <div className="profile-pill">{user?.stateOfDeployment || "SAED IMS"}</div>
           </div>
         </header>
-        <Outlet />
+        {isUnauthorizedTrainer ? <UnauthorizedPage /> : <Outlet />}
       </main>
     </div>
   );

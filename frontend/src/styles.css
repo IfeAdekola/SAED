@@ -308,6 +308,8 @@ button:disabled { cursor: not-allowed; opacity: 0.65; }
 .wide-button { width: 100%; margin-top: 2px; }
 .auth-switch { margin-top: 30px !important; text-align: center; font-size: 14px; }
 .auth-switch a { color: var(--brand); font-weight: 800; }
+.auth-switch.trainer-switch { margin-top: 12px !important; font-size: 13px; }
+.auth-switch.trainer-switch a { color: var(--brand); }
 .step-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 36px; }
 .step-bars span { height: 5px; border-radius: 10px; background: #e3e5e4; }
 .step-bars .filled { background: #252525; }
@@ -625,7 +627,7 @@ button:disabled { cursor: not-allowed; opacity: 0.65; }
 .management-table { display: grid; gap: 10px; }
 .management-row {
   display: grid;
-  grid-template-columns: 1.3fr 1.2fr 0.6fr 1.4fr;
+  grid-template-columns: 1.3fr 1fr 0.6fr 0.8fr 1.4fr;
   align-items: center;
   gap: 14px;
   padding: 14px;
@@ -692,6 +694,53 @@ button:disabled { cursor: not-allowed; opacity: 0.65; }
   font-weight: 800;
 }
 .icon-action[disabled] { opacity: 0.6; background: var(--action-bg); color: var(--muted); border-color: var(--surface-border); }
+.action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Unauthorized trainer page */
+.unauthorized-page { display: flex; justify-content: center; align-items: center; min-height: 60vh; padding: 20px; }
+.unauthorized-card {
+  max-width: 480px;
+  text-align: center;
+  padding: 40px 32px;
+  border-radius: 16px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface);
+}
+.unauthorized-icon { color: var(--brand); margin-bottom: 16px; }
+.unauthorized-icon svg { color: #e67e22; }
+.unauthorized-card h2 { margin: 0 0 12px; font-size: 20px; }
+.unauthorized-card p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0 0 20px; }
+.unauthorized-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.unauthorized-status.paid { background: #e8f5e9; color: #2e7d32; }
+.unauthorized-status.unpaid { background: #fff3e0; color: #e65100; }
+.dark .unauthorized-status.paid { background: rgba(46, 125, 50, 0.15); color: #66bb6a; }
+.dark .unauthorized-status.unpaid { background: rgba(230, 81, 0, 0.15); color: #ffb74d; }
+.pay-button { margin-bottom: 20px; }
+.unauthorized-contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (max-width: 680px) {
+  .management-row { grid-template-columns: 1fr; gap: 8px; }
+  .management-row.table-head { display: none; }
+  .action-buttons { flex-direction: column; }
+  .unauthorized-card { padding: 28px 20px; }
+}
 
 /* Use program-style button visuals inside management rows.
    `!important` keeps the inline-flex / centred layout even when the

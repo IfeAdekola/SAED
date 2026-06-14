@@ -19,6 +19,7 @@ import ActivityDetail from "./pages/ActivityDetail.jsx";
 import Opportunities from "./pages/Opportunities.jsx";
 import Forgot from "./pages/Forgot.jsx";
 import Signup from "./pages/Signup.jsx";
+import TrainerSignup from "./pages/TrainerSignup.jsx";
 import "./styles.css";
 
 // apply saved or system preference theme immediately so hard refresh preserves choice
@@ -61,6 +62,7 @@ createRoot(document.getElementById("root")).render(
           <Route path="/forgot" element={<Forgot />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/trainer-signup" element={<TrainerSignup />} />
           <Route path="/programs" element={<Programs />} />
           <Route path="/programs/:id" element={<ProgramDetail />} />
           <Route
