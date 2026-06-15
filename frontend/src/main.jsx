@@ -20,6 +20,11 @@ import Opportunities from "./pages/Opportunities.jsx";
 import Forgot from "./pages/Forgot.jsx";
 import Signup from "./pages/Signup.jsx";
 import TrainerSignup from "./pages/TrainerSignup.jsx";
+import FindTrainers from "./pages/FindTrainers.jsx";
+import ConnectTrainer from "./pages/ConnectTrainer.jsx";
+import ConnectionSuccess from "./pages/ConnectionSuccess.jsx";
+import CourseManagement from "./pages/CourseManagement.jsx";
+import TrainerSignupSuccess from "./pages/TrainerSignupSuccess.jsx";
 import "./styles.css";
 
 // apply saved or system preference theme immediately so hard refresh preserves choice
@@ -63,6 +68,7 @@ createRoot(document.getElementById("root")).render(
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/trainer-signup" element={<TrainerSignup />} />
+          <Route path="/trainer-signup-success" element={<TrainerSignupSuccess />} />
           <Route path="/programs" element={<Programs />} />
           <Route path="/programs/:id" element={<ProgramDetail />} />
           <Route
@@ -85,10 +91,42 @@ createRoot(document.getElementById("root")).render(
               }
             />
             <Route
+              path="find-trainers"
+              element={
+                <ProtectedRoute roles={["corps_member"]}>
+                  <FindTrainers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="connect-trainer/:trainerId"
+              element={
+                <ProtectedRoute roles={["corps_member"]}>
+                  <ConnectTrainer />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="connection-success"
+              element={
+                <ProtectedRoute roles={["corps_member"]}>
+                  <ConnectionSuccess />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="manage-applications"
               element={
                 <ProtectedRoute roles={["admin", "trainer"]}>
                   <ManageApplications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="course-management"
+              element={
+                <ProtectedRoute roles={["trainer"]}>
+                  <CourseManagement />
                 </ProtectedRoute>
               }
             />

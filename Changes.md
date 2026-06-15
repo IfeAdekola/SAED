@@ -108,3 +108,52 @@ Implemented in this update:
   - Trainers see: `is_authorized`, `has_paid`, `authorized_at` (Authorization section)
   - Corps members see: `state_of_origin`, `lga_of_deployment` (Corps Member Details section)
   - Admins see only basic fields (User Information, Contact, NYSC Details)
+
+## 2026-06-14 — Major app redesign
+
+### Auth Flow Redesign
+- **Signup page**: Added role selector (Corps Member / Trainer) with card-based UI
+- **Corps Member Signup**: 2-step flow - Step 1 (Account Info: Full Name, Email, Phone, State Code LA/26B/0123, LGA, Password), Step 2 (Skill Interest selection)
+- **Trainer Signup**: Multi-step with LGA checkboxes (multi-select from 20 Lagos LGAs), specialization dropdown, years of experience, bio, company name, number trained
+- **Login page**: Added role selector cards (Corps Member / Trainer) matching signup design
+- **State Code Format**: Changed from free-text to `LA/26B/0123` format with regex validation
+
+### New Backend Models
+- **Course**: Trainers can create courses with title, description, price, duration, dates, fast track toggle
+- **FastTrackVideo**: Video content for fast-track learning modules with pricing
+- **Connection**: Links corps members to trainers (pending/active/completed/cancelled status)
+
+### New Profile Fields
+- `skill_interest`: Corps member's chosen skill area
+- `specialization`: Trainer's single specialization
+- `partner_lgas`: JSON array of LGAs the trainer serves
+- `years_experience`: Trainer's years of experience
+- `bio`: Trainer's professional bio
+- `company_name`: Trainer's company name
+- `number_trained`: Number of students trained
+- `partnership_letter`: File upload for partnership letter
+- `is_verified`: Admin verification status
+
+### New Pages
+- **FindTrainers**: Corps members search trainers by LGA and skill interest
+- **ConnectTrainer**: Review trainer details and confirm connection
+- **ConnectionSuccess**: Success page after connecting with trainer
+- **CourseManagement**: Trainers create, edit, delete courses with fast track toggle
+- **TrainerSignupSuccess**: Success page after trainer registration
+
+### New API Endpoints
+- `GET /api/trainers/`: Available trainers filtered by LGA and skill
+- `POST /api/connect/`: Connect with a trainer
+- `GET /api/connections/`: My connections (corps member)
+- `GET /api/manage/courses/`: List trainer's courses
+- `POST /api/manage/courses/`: Create a course
+- `PATCH /api/manage/courses/<id>/`: Update a course
+- `DELETE /api/manage/courses/<id>/`: Delete a course
+- `GET /api/trainer/corpers/`: List corpers connected to trainer
+
+### Styling Updates
+- Added role selector card styles with green border on selection
+- Added skill grid for interest selection
+- Added LGA checkbox grid for trainer signup
+- Added auth hero panel with green gradient background
+- Added course management and trainer card styles

@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, User, GraduationCap } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
@@ -55,37 +55,33 @@ export default function Login() {
       <Link className="back-link" to="/"><ArrowLeft size={16} /> Back</Link>
       <h1>Welcome Back</h1>
       <p>Login to access your account</p>
-      <div className="role-toggle" role="tablist" aria-label="Account type">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={form.role === "trainer"}
-          className={form.role === "trainer" ? "active" : ""}
-          onClick={() => setForm({ ...form, role: "trainer" })}
-        >
-          I'm a Trainer
+
+      <div className="role-selector">
+        <button type="button" className={`role-card ${form.role === "corps_member" ? "selected" : ""}`} onClick={() => setForm({ ...form, role: "corps_member" })}>
+          <User size={24} />
+          <span>I'm a Corps Member</span>
         </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={form.role === "corps_member"}
-          className={form.role === "corps_member" ? "active" : ""}
-          onClick={() => setForm({ ...form, role: "corps_member" })}
-        >
-          I'm a Corps Member
+        <button type="button" className={`role-card ${form.role === "trainer" ? "selected" : ""}`} onClick={() => setForm({ ...form, role: "trainer" })}>
+          <GraduationCap size={24} />
+          <span>I'm a Trainer</span>
         </button>
       </div>
+
       <form className="auth-form" onSubmit={handleSubmit}>
-        <label>Email Address<input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Enter your Email Address" type="email" required /></label>
+        <label>Email Address *
+          <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Enter your Email Address" type="email" required />
+        </label>
         {fields.email && <span className="field-error">{fields.email}</span>}
-        <label>Password<PasswordInput value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Enter your Password" required /></label>
+        <label>Password *
+          <PasswordInput value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Enter your Password" required />
+        </label>
         {fields.password && <span className="field-error">{fields.password}</span>}
         <div className="form-row">
           <label className="checkbox-label"><input type="checkbox" checked={form.remember} onChange={(e) => setForm({ ...form, remember: e.target.checked })} /> Remember me</label>
           <Link to="/forgot">Forget Password?</Link>
         </div>
         {error && <div className="form-error">{error}</div>}
-        <button className="wide-button" disabled={submitting}>{submitting ? "Logging in..." : "Login"}</button>
+        <button className="wide-button" disabled={submitting}>{submitting ? "Logging in..." : "Login →"}</button>
       </form>
       <p className="auth-switch">Don't have an account? <Link to="/signup">Sign Up</Link></p>
     </AuthFrame>
@@ -95,10 +91,14 @@ export default function Login() {
 export function AuthFrame({ children }) {
   return (
     <main className="auth-page">
-      <div className="auth-top">
-        <DarkToggle />
+      <div className="auth-panel">{children}</div>
+      <div className="auth-hero">
+        <div className="auth-hero-content">
+          <span className="auth-hero-icon">🎓</span>
+          <h2>Welcome to NYSC SAED</h2>
+          <p>Join thousands of corps members learning new skills with expert trainers across Lagos State</p>
+        </div>
       </div>
-      <section className="auth-panel">{children}</section>
     </main>
   );
 }

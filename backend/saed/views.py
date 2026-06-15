@@ -17,7 +17,7 @@ from django.middleware.csrf import get_token
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .models import Application, Profile, Program
+from .models import Application, Connection, Course, FastTrackVideo, Profile, Program
 
 
 PROGRAM_FIELDS = {
@@ -109,9 +109,17 @@ def user_payload(user):
         "stateOfDeployment": profile.state_of_deployment if profile else "",
         "stateOfOrigin": profile.state_of_origin if profile else "",
         "lgaOfDeployment": profile.lga_of_deployment if profile else "",
+        "skillInterest": profile.skill_interest if profile else "",
         "isActive": user.is_active,
         "isAuthorized": profile.is_authorized if profile else False,
         "hasPaid": profile.has_paid if profile else False,
+        "specialization": profile.specialization if profile else "",
+        "partnerLgas": profile.partner_lgas if profile else [],
+        "yearsExperience": profile.years_experience if profile else 0,
+        "bio": profile.bio if profile else "",
+        "companyName": profile.company_name if profile else "",
+        "numberTrained": profile.number_trained if profile else 0,
+        "isVerified": profile.is_verified if profile else False,
     }
 
 
@@ -252,12 +260,14 @@ def signup_view(request):
     if role == "corps_member":
         if not data.get("phone", "").strip():
             fields["phone"] = "Phone number is required."
-        if not data.get("stateOfOrigin", "").strip():
-            fields["stateOfOrigin"] = "State of origin is required."
+        if not data.get("nyscStateCode", "").strip():
+            fields["nyscStateCode"] = "NYSC state code is required."
         if not data.get("stateOfDeployment", "").strip():
             fields["stateOfDeployment"] = "State of deployment is required."
         if not data.get("lgaOfDeployment", "").strip():
             fields["lgaOfDeployment"] = "LGA of deployment is required."
+        if not data.get("skillInterest", "").strip():
+            fields["skillInterest"] = "Skill interest is required."
     try:
         validate_password(password)
     except ValidationError as exc:
@@ -285,6 +295,7 @@ def signup_view(request):
         state_of_deployment=data.get("stateOfDeployment", "").strip(),
         state_of_origin=data.get("stateOfOrigin", "").strip(),
         lga_of_deployment=data.get("lgaOfDeployment", "").strip(),
+        skill_interest=data.get("skillInterest", "").strip(),
     )
     login(request, user)
     return JsonResponse({"user": user_payload(user)}, status=201)
@@ -298,6 +309,12 @@ def trainer_signup_view(request):
     email = clean_email(data.get("email", ""))
     password = data.get("password", "")
     phone = data.get("phone", "").strip()
+    specialization = data.get("specialization", "").strip()
+    partner_lgas = data.get("partnerLgas", [])
+    years_experience = data.get("yearsExperience", 0)
+    bio = data.get("bio", "").strip()
+    company_name = data.get("companyName", "").strip()
+    number_trained = data.get("numberTrained", 0)
     fields = {}
 
     if len(full_name.split()) < 2:
@@ -306,6 +323,10 @@ def trainer_signup_view(request):
         fields["email"] = "Enter a valid email address."
     if not phone:
         fields["phone"] = "Phone number is required."
+    if not specialization:
+        fields["specialization"] = "Specialization is required."
+    if not partner_lgas:
+        fields["partnerLgas"] = "Select at least one LGA."
     try:
         validate_password(password)
     except ValidationError as exc:
@@ -325,7 +346,19 @@ def trainer_signup_view(request):
     except IntegrityError:
         return validation_error("An account with this email already exists.", {"email": "Email is already registered."})
 
-    Profile.objects.create(user=user, role="trainer", phone=phone, is_authorized=False, has_paid=False)
+    Profile.objects.create(
+        user=user,
+        role="trainer",
+        phone=phone,
+        specialization=specialization,
+        partner_lgas=partner_lgas,
+        years_experience=int(years_experience) if years_experience else 0,
+        bio=bio,
+        company_name=company_name,
+        number_trained=int(number_trained) if number_trained else 0,
+        is_authorized=False,
+        has_paid=False,
+    )
     login(request, user)
     return JsonResponse({"user": user_payload(user)}, status=201)
 
@@ -670,3 +703,161 @@ def dashboard(request):
     if user_role == "trainer":
         payload["trainerPrograms"] = [trainer_program_payload(program) for program in trainer_programs]
     return JsonResponse(payload)
+
+
+def course_payload(course):
+    return {
+        "id": course.id,
+        "title": course.title,
+        "description": course.description,
+        "category": course.category,
+        "price": str(course.price),
+        "durationWeeks": course.duration_weeks,
+        "startDate": course.start_date.isoformat() if course.start_date else None,
+        "endDate": course.end_date.isoformat() if course.end_date else None,
+        "maxStudents": course.max_students,
+        "isActive": course.is_active,
+        "hasFastTrack": course.has_fast_track,
+        "createdAt": course.created_at.isoformat(),
+        "trainerId": course.trainer_id,
+        "trainerName": course.trainer.get_full_name() or course.trainer.email,
+    }
+
+
+def connection_payload(connection):
+    return {
+        "id": connection.id,
+        "status": connection.status,
+        "connectedAt": connection.connected_at.isoformat(),
+        "corpsMember": user_payload(connection.corps_member),
+        "trainer": user_payload(connection.trainer),
+    }
+
+
+@require_roles("trainer")
+@require_authorized_trainer
+@require_http_methods(["GET", "POST"])
+@csrf_exempt
+def manage_courses(request):
+    if request.method == "GET":
+        courses = Course.objects.filter(trainer=request.user).order_by("-created_at")
+        return JsonResponse({"courses": [course_payload(c) for c in courses]})
+
+    data = read_json(request)
+    title = data.get("title", "").strip()
+    if not title:
+        return validation_error("Course title is required.", {"title": "Title is required."})
+
+    course = Course.objects.create(
+        trainer=request.user,
+        title=title,
+        description=data.get("description", "").strip(),
+        category=data.get("category", "").strip(),
+        price=data.get("price", 0),
+        duration_weeks=data.get("durationWeeks", 4),
+        start_date=data.get("startDate"),
+        end_date=data.get("endDate"),
+        max_students=data.get("maxStudents", 40),
+        has_fast_track=data.get("hasFastTrack", False),
+    )
+    return JsonResponse({"course": course_payload(course)}, status=201)
+
+
+@require_roles("trainer")
+@require_authorized_trainer
+@require_http_methods(["PATCH", "DELETE"])
+@csrf_exempt
+def manage_course_detail(request, course_id):
+    try:
+        course = Course.objects.get(id=course_id, trainer=request.user)
+    except Course.DoesNotExist:
+        return JsonResponse({"error": "Course not found."}, status=404)
+
+    if request.method == "DELETE":
+        course.delete()
+        return JsonResponse({"ok": True})
+
+    data = read_json(request)
+    for field in ["title", "description", "category", "price", "durationWeeks", "startDate", "endDate", "maxStudents", "hasFastTrack"]:
+        if field in data:
+            model_field = {
+                "title": "title", "description": "description", "category": "category",
+                "price": "price", "durationWeeks": "duration_weeks", "startDate": "start_date",
+                "endDate": "end_date", "maxStudents": "max_students", "hasFastTrack": "has_fast_track",
+            }[field]
+            setattr(course, model_field, data[field])
+    course.save()
+    return JsonResponse({"course": course_payload(course)})
+
+
+@require_roles("corps_member")
+@require_http_methods(["GET"])
+def available_trainers(request):
+    lga = request.GET.get("lga", "")
+    skill = request.GET.get("skill", "")
+    trainers = User.objects.select_related("profile").filter(
+        is_active=True,
+        profile__role="trainer",
+        profile__is_authorized=True,
+    )
+    if lga:
+        trainers = trainers.filter(profile__partner_lgas__contains=[lga])
+    if skill:
+        trainers = trainers.filter(profile__specialization__icontains=skill)
+    result = []
+    for t in trainers:
+        profile = t.profile
+        result.append({
+            "id": t.id,
+            "fullName": t.get_full_name() or t.email,
+            "email": t.email,
+            "specialization": profile.specialization,
+            "partnerLgas": profile.partner_lgas,
+            "yearsExperience": profile.years_experience,
+            "bio": profile.bio,
+            "companyName": profile.company_name,
+            "numberTrained": profile.number_trained,
+        })
+    return JsonResponse({"trainers": result})
+
+
+@require_roles("corps_member")
+@require_http_methods(["POST"])
+@csrf_exempt
+def connect_trainer(request):
+    data = read_json(request)
+    trainer_id = data.get("trainerId")
+    if not trainer_id:
+        return validation_error("Trainer is required.", {"trainerId": "Select a trainer."})
+
+    try:
+        trainer = User.objects.select_related("profile").get(
+            id=trainer_id, is_active=True, profile__role="trainer", profile__is_authorized=True
+        )
+    except User.DoesNotExist:
+        return JsonResponse({"error": "Trainer not found."}, status=404)
+
+    connection, created = Connection.objects.get_or_create(
+        corps_member=request.user,
+        trainer=trainer,
+        defaults={"status": "pending"},
+    )
+    if not created:
+        return JsonResponse({"error": "You are already connected to this trainer."}, status=400)
+
+    return JsonResponse({"connection": connection_payload(connection)}, status=201)
+
+
+@require_roles("corps_member")
+@require_http_methods(["GET"])
+def my_connections(request):
+    connections = Connection.objects.filter(corps_member=request.user).select_related("trainer", "trainer__profile")
+    return JsonResponse({"connections": [connection_payload(c) for c in connections]})
+
+
+@require_roles("trainer")
+@require_authorized_trainer
+@require_http_methods(["GET"])
+def my_corpers(request):
+    connections = Connection.objects.filter(trainer=request.user).select_related("corps_member", "corps_member__profile")
+    return JsonResponse({"corpers": [connection_payload(c) for c in connections]})

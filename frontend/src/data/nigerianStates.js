@@ -217,4 +217,6 @@ const NIGERIAN_STATES = {
 
 const STATES = Object.keys(NIGERIAN_STATES).sort();
 
-export { NIGERIAN_STATES, STATES };
+const LAGOS_LGAS = NIGERIAN_STATES.Lagos || [];
+
+export { NIGERIAN_STATES, STATES, LAGOS_LGAS };
