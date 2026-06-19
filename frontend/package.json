@@ -19,7 +19,6 @@
   "devDependencies": {
     "cross-env": "^7.0.3"
   },
-  "proxy": "http://127.0.0.1:8002",
   "browserslist": {
     "production": [
       ">0.2%",

@@ -19,7 +19,7 @@ export default function Login() {
   async function handleSubmit(event) {
     event.preventDefault();
     const nextFields = {};
-    if (!/^\S+@\S+\.\S+$/.test(form.email)) nextFields.email = "Enter a valid email address.";
+    if (!form.email.trim()) nextFields.email = "Username or email is required.";
     if (!form.password) nextFields.password = "Password is required.";
     setFields(nextFields);
     if (Object.keys(nextFields).length) return;
@@ -27,7 +27,13 @@ export default function Login() {
     setSubmitting(true);
     setError("");
     try {
-      await login(form);
+      const loggedUser = await login(form);
+      if (loggedUser && loggedUser.role === "trainer") {
+        if (!loggedUser.isAuthorized || !loggedUser.isActive) {
+          navigate("/inactive-account", { replace: true });
+          return;
+        }
+      }
       if (location.state?.pendingProgramId) {
         try {
           await api("/applications/create/", {
@@ -41,7 +47,8 @@ export default function Login() {
           if (!err.message?.includes("already applied")) throw err;
         }
       }
-      navigate(location.state?.redirectTo || "/app", { replace: true });
+      const dest = location.state?.redirectTo || (loggedUser.role === "dunis_admin" ? "/app/dunis-admin" : "/app");
+      navigate(dest, { replace: true });
     } catch (err) {
       setFields(err.data?.fields || {});
       setError(err.message);
@@ -68,8 +75,8 @@ export default function Login() {
       </div>
 
       <form className="auth-form" onSubmit={handleSubmit}>
-        <label>Email Address *
-          <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Enter your Email Address" type="email" required />
+        <label>Username or Email *
+          <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Enter your username or email" required />
         </label>
         {fields.email && <span className="field-error">{fields.email}</span>}
         <label>Password *
@@ -90,15 +97,11 @@ export default function Login() {
 
 export function AuthFrame({ children }) {
   return (
-    <main className="auth-page">
-      <div className="auth-panel">{children}</div>
-      <div className="auth-hero">
-        <div className="auth-hero-content">
-          <span className="auth-hero-icon">🎓</span>
-          <h2>Welcome to NYSC SAED</h2>
-          <p>Join thousands of corps members learning new skills with expert trainers across Lagos State</p>
-        </div>
+    <main className="auth-page full-width">
+      <div className="auth-top">
+        <DarkToggle />
       </div>
+      <div className="auth-panel">{children}</div>
     </main>
   );
 }

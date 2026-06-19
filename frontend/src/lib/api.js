@@ -20,20 +20,28 @@ const API_BASES = Array.from(
 
 let csrfToken = "";
 let activeApiBase = API_BASES[0];
+let lockedBase = null;
 
 async function ensureCsrf() {
   if (csrfToken) return csrfToken;
-  const response = await fetch(`${activeApiBase}/csrf/`, { credentials: "include" });
-  const data = await response.json();
-  csrfToken = data.csrfToken;
-  return csrfToken;
+  try {
+    const response = await fetch(`${activeApiBase}/csrf/`, { credentials: "include" });
+    if (!response.ok) return "";
+    const data = await response.json();
+    csrfToken = data.csrfToken || "";
+    return csrfToken;
+  } catch {
+    return "";
+  }
 }
 
 export async function api(path, options = {}) {
   const method = options.method || "GET";
   let lastNetworkError = null;
 
-  for (const base of API_BASES) {
+  const basesToTry = lockedBase ? [lockedBase] : API_BASES;
+
+  for (const base of basesToTry) {
     if (activeApiBase !== base) {
       csrfToken = "";
     }
@@ -41,7 +49,8 @@ export async function api(path, options = {}) {
     try {
       for (let attempt = 0; attempt < 2; attempt += 1) {
         const headers = { ...(options.headers || {}) };
-        if (options.body && !headers["Content-Type"]) {
+        const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+        if (options.body && !isFormData && !headers["Content-Type"]) {
           headers["Content-Type"] = "application/json";
         }
         if (!["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())) {
@@ -53,7 +62,7 @@ export async function api(path, options = {}) {
           ...options,
           method,
           headers,
-          body: options.body ? JSON.stringify(options.body) : undefined,
+          body: options.body ? (isFormData ? options.body : JSON.stringify(options.body)) : undefined,
         });
 
         const text = await response.text();
@@ -78,6 +87,7 @@ export async function api(path, options = {}) {
         }
 
         activeApiBase = base;
+        lockedBase = base;
         if (["/auth/login/", "/auth/signup/", "/auth/logout/"].includes(path)) {
           csrfToken = "";
         }
@@ -87,6 +97,8 @@ export async function api(path, options = {}) {
       if (err instanceof TypeError) {
         csrfToken = "";
         lastNetworkError = err;
+        if (!lockedBase) continue;
+        lockedBase = null;
         continue;
       }
       throw err;

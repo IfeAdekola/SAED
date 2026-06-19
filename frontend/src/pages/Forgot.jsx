@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { X } from "lucide-react";
 import FloatingNav from "../components/FloatingNav.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
 import { useAuth } from "../lib/auth.jsx";
@@ -9,13 +10,19 @@ export default function Forgot() {
   const [reset, setReset] = useState(null);
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
   const [fields, setFields] = useState({});
+
+  function showMsg(text, type) {
+    setMessage(text);
+    setMessageType(type || "");
+  }
   const { requestPasswordReset, confirmPasswordReset } = useAuth();
 
   async function handleSubmit(e) {
     e.preventDefault();
     setFields({});
-    setMessage("");
+    showMsg("");
     if (!/^\S+@\S+\.\S+$/.test(email)) {
       setFields({ email: "Enter a valid email address." });
       return;
@@ -23,17 +30,17 @@ export default function Forgot() {
     try {
       const data = await requestPasswordReset({ email });
       setReset(data.uid && data.token ? { uid: data.uid, token: data.token } : null);
-      setMessage(data.message);
+      showMsg(data.message, "success");
     } catch (err) {
       setFields(err.data?.fields || {});
-      setMessage(err.message);
+      showMsg(err.message, "error");
     }
   }
 
   async function handleConfirm(e) {
     e.preventDefault();
     setFields({});
-    setMessage("");
+    showMsg("");
     if (password.length < 8) {
       setFields({ password: "Use at least 8 characters." });
       return;
@@ -42,10 +49,10 @@ export default function Forgot() {
       await confirmPasswordReset({ ...reset, password });
       setReset(null);
       setPassword("");
-      setMessage("Password updated. You can now log in.");
+      showMsg("Password updated. You can now log in.", "success");
     } catch (err) {
       setFields(err.data?.fields || {});
-      setMessage(err.message);
+      showMsg(err.message, "error");
     }
   }
 
@@ -57,7 +64,12 @@ export default function Forgot() {
           <h1>Reset Password</h1>
           <p>Enter your email to receive password reset instructions.</p>
 
-          {message && <div className="inline-message">{message}</div>}
+          {message && (
+            <div className={`inline-message inline-message--${messageType || "error"}`}>
+              {message}
+              <button type="button" className="inline-message-close" onClick={() => showMsg("")}><X size={16} /></button>
+            </div>
+          )}
 
           {!reset ? (
             <form className="auth-form" onSubmit={handleSubmit}>

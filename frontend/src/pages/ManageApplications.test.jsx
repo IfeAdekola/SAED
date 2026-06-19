@@ -87,7 +87,7 @@ test("trainer cannot change a completed application (action buttons disabled)", 
 });
 
 test("admin can still change a completed application (action buttons enabled)", async () => {
-  authState.user = { role: "admin" };
+  authState.user = { role: "saed_admin" };
 
   api.mockResolvedValue({
     applications: [

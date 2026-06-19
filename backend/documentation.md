@@ -56,7 +56,7 @@ backend/
 - `saed/urls.py`: API route declarations.
 - `saed/admin.py`: Django admin registrations for profiles, programs, and applications.
 - `saed/tests.py`: Backend API tests.
-- `saed/management/commands/seed_saed.py`: Demo users and sample SAED programs. Also assigns the demo trainer account to every seeded program.
+- `saed/management/commands/seed_saed.py`: Demo users and sample SAED programs. Also assigns the demo trainer account to every seeded program. Admin accounts use `saed_admin` role.
 - `saed/management/commands/fix_program_categories.py`: One-off command to align historical program category values with the current choices. Dry-run by default; pass `--apply` to save the suggested updates.
 
 ## Models
@@ -68,7 +68,7 @@ Stores extra information for each Django user.
 Fields:
 
 - `user`: one-to-one link to Django `User`
-- `role`: `corps_member`, `trainer`, or `admin`
+- `role`: `corps_member`, `trainer`, `saed_admin`, or `dunis_admin`
 - `phone`
 - `nysc_state_code`
 - `state_of_deployment`
@@ -77,6 +77,23 @@ Fields:
 - `is_authorized`: boolean indicating if a trainer account is authorized (default `False` for self-registered trainers, `True` for admin-created trainers)
 - `has_paid`: boolean indicating if the trainer has paid the authorization fee (scaffolded for future Paystack integration)
 - `authorized_at`: timestamp when the trainer was authorized by an admin
+- `updated_at`: auto-updated timestamp
+- `profile_picture`: optional profile image
+- `specialization`: trainer specialization area
+- `partner_lgas`: list of partner LGAs (JSON)
+- `years_experience`: years of experience
+- `bio`: trainer biography
+- `company_name`: company name
+- `number_trained`: number of people trained
+- `partnership_letter`: uploaded partnership letter file
+- `is_verified`: email verification status
+- `has_selected_trainers`: whether corps member has selected trainers
+- `can_upload_fast_track`: whether trainer can upload fast track videos
+- `is_busy_corper`: busy corper flag
+- `payment_verified`: payment verification status
+- `payment_reference`: Paystack payment reference
+- `payment_verified_at`: timestamp when payment was verified
+- `authorization_status`: `pending`, `approved`, `declined`, or `removed`
 
 ### Program
 
@@ -93,6 +110,9 @@ Fields:
 - `trainer_name`: free-form display name for the trainer. The API keeps it in sync with `trainer.get_full_name()` (or email/username as a fallback) when `trainer` is set, so existing reads and seeded data still work.
 - `location`
 - `is_active`
+- `is_restricted`: whether the program is restricted
+- `restricted_at`: timestamp when restricted
+- `restricted_by`: user who restricted the program
 - `created_at`
 
 ### Application
@@ -108,6 +128,73 @@ Fields:
 - `created_at`
 
 Only corps members can submit applications. Each applicant can apply to the same program only once.
+
+### Course
+
+Stores trainer-created courses for fast track content.
+
+Fields:
+
+- `trainer`: foreign key to the trainer user
+- `title`, `description`, `category`
+- `price`: decimal price
+- `duration_weeks`: course duration
+- `start_date`, `end_date`: optional date range
+- `max_students`: capacity
+- `is_active`: whether the course is active
+- `has_fast_track`: whether the course has fast track videos
+- `created_at`
+
+### FastTrackVideo
+
+Stores video content for fast track courses.
+
+Fields:
+
+- `course`: foreign key to the course
+- `title`, `description`
+- `video_url`: URL of the video
+- `duration_seconds`: video duration
+- `order`: display order
+- `price`: video price
+- `is_free_preview`: whether this is a free preview
+- `created_at`
+
+### Connection
+
+Stores trainer-corps member connections.
+
+Fields:
+
+- `corps_member`: foreign key to the corps member user
+- `trainer`: foreign key to the trainer user
+- `status`: `pending`, `active`, `completed`, or `cancelled`
+- `connected_at`: timestamp when connected
+- `completed_at`: timestamp when completed
+
+### Notification
+
+Stores in-app notifications for users.
+
+Fields:
+
+- `user`: foreign key to the recipient user
+- `title`, `message`
+- `reason`: `program_restricted`, `program_unrestricted`, `connection_request`, `connection_approved`, or `admin_update`
+- `is_read`: whether the notification has been read
+- `program`: optional foreign key to a related program
+- `created_at`
+
+### Complaint
+
+Stores user complaints submitted to the DUNIS admin.
+
+Fields:
+
+- `user`: foreign key to the complainant
+- `subject`, `message`
+- `status`: `open` or `resolved`
+- `created_at`
 
 ## API Endpoints
 
@@ -136,6 +223,21 @@ All backend routes are under `/api/`.
 | `/api/manage/programs/<id>/` | PATCH | Admin/Trainer | Update a program. Trainers can only update programs they are assigned to. |
 | `/api/manage/applications/` | GET | Admin/Trainer | List all applications. Trainers see only applications for programs they are assigned to. |
 | `/api/manage/applications/<id>/` | PATCH | Admin/Trainer | Approve, decline, or complete an application. Trainers cannot modify a `completed` application; admins can override the immutability. |
+| `/api/manage/courses/` | GET/POST | Trainer | List/create courses. |
+| `/api/manage/courses/<id>/` | PATCH/DELETE | Trainer | Update/delete a course. |
+| `/api/manage/fast-track-videos/` | GET/POST | Trainer (authorized) | List/create fast track videos. |
+| `/api/manage/fast-track-videos/<id>/` | PATCH/DELETE | Trainer (authorized) | Update/delete a fast track video. |
+| `/api/manage/fetch-video-duration/` | POST | Trainer (authorized) | Fetch video duration from URL. |
+| `/api/courses/` | GET | Authenticated | List active courses. |
+| `/api/trainers/` | GET | Authenticated | List authorized trainers (filtered by LGA and skill). |
+| `/api/connect/` | POST | Corps Member | Request connection with a trainer. |
+| `/api/connections/` | GET | Authenticated | List current user's connections. |
+| `/api/select-trainers/` | POST | Corps Member | Select trainers during onboarding. |
+| `/api/notifications/` | GET | Authenticated | List current user's notifications. |
+| `/api/notifications/<id>/read/` | POST | Authenticated | Mark a notification as read. |
+| `/api/submit-complaint/` | POST | Authenticated | Submit a complaint to the DUNIS admin. |
+| `/api/paystack/initialize/` | POST | Authenticated | Initialize a Paystack payment. |
+| `/api/paystack/verify/` | POST | Authenticated | Verify a Paystack payment. |
 
 ## Program payload
 
@@ -179,17 +281,22 @@ The Django admin `ProfileAdmin` uses dynamic `get_fieldsets()` to show role-spec
 - Login accepts email and password only.
 - Public signup creates corps member accounts with step-by-step registration including Nigerian state and LGA dropdowns.
 - Trainers can self-register at `/trainer-signup` but require admin authorization before accessing most features.
-- Admin users can create trainer accounts.
-- Admin users can authorize/deauthorize self-registered trainers from the user management screen.
-- Admin users cannot create another admin account through the API.
-- Admin users cannot deactivate their own account or change their own role through the API.
-- Trainers and admins can manage programs and applications.
-- Only admins can create new programs. Trainers can update programs they are assigned to and review their applications.
-- Trainers and admins cannot apply to programs or submit applications.
-- Trainers and admins can list all submitted student applications through `/api/manage/applications/`.
+- SAED admin users can create trainer accounts.
+- SAED admin users can authorize/deauthorize self-registered trainers from the user management screen.
+- SAED admin users cannot create another admin account through the API.
+- SAED admin users cannot deactivate their own account or change their own role through the API.
+- DUNIS admin users can view and manage payments and fast track access.
+- Trainers and SAED admins can manage programs and applications.
+- Only SAED admins can create new programs. Trainers can update programs they are assigned to and review their applications.
+- Trainers and SAED admins cannot apply to programs or submit applications.
+- Trainers and SAED admins can list all submitted student applications through `/api/manage/applications/`.
 - Trainer accounts are auto-restored to the expected state by the `seed_saed` management command.
-- Corps members can apply to programs and view their own applications.
-- Unauthorized trainers see a "Account Pending Authorization" page with payment status and a "Pay Authorization Fee" button (scaffolded for future Paystack integration).
+- Corps members can apply to programs, view their own applications, connect with trainers, and submit complaints.
+- Unauthorized trainers see a "Account Pending Activation" page with payment status and a "Pay Authorization Fee" button.
+- Corps members can select trainers during onboarding or later from the Trainers tab.
+- Trainers can create courses and upload fast track videos (if authorized by admin).
+- Notifications are sent for program restrictions, connection requests, and admin updates.
+- Non-admin users do not see admin-update notifications.
 
 ## CSRF Notes
 
@@ -223,7 +330,7 @@ Seed demo data:
 .\backend\venv\Scripts\python.exe backend\manage.py seed_saed
 ```
 
-This command restores the demo admin and trainer accounts to active status, resets their passwords to `password123`, restores their expected roles, and assigns the demo trainer account to every seeded program.
+This command restores the demo admin, trainer, and corps member accounts to active status, resets their passwords to `password123`, restores their expected roles, authorizes the trainer (with `has_paid=True` and `payment_verified=True`), and assigns the demo trainer account to every seeded program.
 
 Run Django checks:
 
@@ -283,7 +390,14 @@ Email: trainer@saed.test
 Password: password123
 ```
 
-If the demo admin or trainer account cannot log in, or its role/active status has been changed, rerun `seed_saed` to restore it.
+Corps Member:
+
+```text
+Email: member@saed.test
+Password: password123
+```
+
+If the demo admin, trainer, or corps member account cannot log in, or its role/active status has been changed, rerun `seed_saed` to restore it.
 
 ## Production Notes
 

@@ -41,7 +41,7 @@ class ProfileAdmin(admin.ModelAdmin):
             if obj.role == "trainer":
                 return basic + [
                     ("Trainer Details", {"fields": ("specialization", "partner_lgas", "years_experience", "bio", "company_name", "number_trained", "partnership_letter")}),
-                    ("Authorization", {"fields": ("is_authorized", "has_paid", "authorized_at", "is_verified")}),
+                    ("Authorization", {"fields": ("is_authorized", "authorization_status", "has_paid", "payment_verified", "payment_reference", "authorized_at", "payment_verified_at", "is_verified", "can_upload_fast_track")}),
                 ]
             elif obj.role == "corps_member":
                 return basic + [

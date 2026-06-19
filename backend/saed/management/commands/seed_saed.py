@@ -229,8 +229,8 @@ class Command(BaseCommand):
         admin.is_staff = True
         admin.is_superuser = True
         admin.save()
-        admin_profile, _ = Profile.objects.get_or_create(user=admin, defaults={"role": "admin"})
-        admin_profile.role = "admin"
+        admin_profile, _ = Profile.objects.get_or_create(user=admin, defaults={"role": "saed_admin"})
+        admin_profile.role = "saed_admin"
         admin_profile.save(update_fields=["role"])
 
         trainer, _ = User.objects.get_or_create(
@@ -244,7 +244,22 @@ class Command(BaseCommand):
         trainer_profile, _ = Profile.objects.get_or_create(user=trainer, defaults={"role": "trainer", "phone": "08000000000"})
         trainer_profile.role = "trainer"
         trainer_profile.phone = trainer_profile.phone or "08000000000"
-        trainer_profile.save(update_fields=["role", "phone"])
+        trainer_profile.is_authorized = True
+        trainer_profile.has_paid = True
+        trainer_profile.payment_verified = True
+        trainer_profile.save(update_fields=["role", "phone", "is_authorized", "has_paid", "payment_verified"])
+
+        member, _ = User.objects.get_or_create(
+            username="member@saed.test",
+            defaults={"email": "member@saed.test", "first_name": "John", "last_name": "Member"},
+        )
+        member.set_password("password123")
+        member.email = "member@saed.test"
+        member.is_active = True
+        member.save()
+        member_profile, _ = Profile.objects.get_or_create(user=member, defaults={"role": "corps_member", "phone": "07000000000"})
+        member_profile.role = "corps_member"
+        member_profile.save(update_fields=["role"])
 
         for item in PROGRAMS:
             Program.objects.update_or_create(title=item["title"], defaults={**item, "trainer": trainer})

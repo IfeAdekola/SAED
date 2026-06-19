@@ -2,15 +2,16 @@ import { ArrowLeft, User, GraduationCap } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
 import { AuthFrame } from "./Login.jsx";
-import { STATES, NIGERIAN_STATES, LAGOS_LGAS } from "../data/nigerianStates.js";
+import { LAGOS_LGAS } from "../data/nigerianStates.js";
 
 const SKILL_AREAS = [
-  "Agro Allied", "Automobile", "Beautification", "Construction",
-  "Cosmetology", "Culture & Tourism", "Education", "Environment",
-  "Film & Photography", "Food Processing", "ICT", "Power & Energy",
+  "Creative Industry", "Automobile", "Construction", "Agro-Allied",
+  "Delivery & Logistics", "Culinary & Catering", "Cleaning Services",
+  "Green Energy", "Satellite & Security Technology", "ICT", "Cosmetology", "Education",
 ];
 
 export default function Signup() {
@@ -21,17 +22,18 @@ export default function Signup() {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     fullName: "",
+    username: "",
     email: "",
     phone: "",
     password: "",
     confirmPassword: "",
     nyscStateCode: "",
-    stateOfDeployment: "",
     lgaOfDeployment: "",
     skillInterest: "",
   });
   const [trainerForm, setTrainerForm] = useState({
     fullName: "",
+    username: "",
     email: "",
     phone: "",
     password: "",
@@ -42,20 +44,13 @@ export default function Signup() {
     bio: "",
     companyName: "",
     numberTrained: "",
+    partnershipLetter: null,
   });
   const { signup } = useAuth();
   const navigate = useNavigate();
 
-  const deploymentLgas = form.stateOfDeployment ? NIGERIAN_STATES[form.stateOfDeployment] || [] : [];
-
   function update(key, value) {
-    setForm((prev) => {
-      const next = { ...prev, [key]: value };
-      if (key === "stateOfDeployment") {
-        next.lgaOfDeployment = "";
-      }
-      return next;
-    });
+    setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   function updateTrainer(key, value) {
@@ -77,10 +72,12 @@ export default function Signup() {
     if (role === "trainer") {
       const nextFields = {};
       if (trainerForm.fullName.trim().split(/\s+/).length < 2) nextFields.fullName = "Enter first and last name.";
+      if (!trainerForm.username.trim()) nextFields.username = "Username is required.";
       if (!/^\S+@\S+\.\S+$/.test(trainerForm.email)) nextFields.email = "Enter a valid email address.";
       if (!trainerForm.phone.trim()) nextFields.phone = "Phone number is required.";
       if (!trainerForm.specialization) nextFields.specialization = "Select a specialization.";
       if (trainerForm.partnerLgas.length === 0) nextFields.partnerLgas = "Select at least one LGA.";
+      if (!trainerForm.partnershipLetter) nextFields.partnershipLetter = "Partnership letter is required.";
       if (trainerForm.password.length < 8) nextFields.password = "Use at least 8 characters.";
       if (trainerForm.password !== trainerForm.confirmPassword) nextFields.confirmPassword = "Passwords do not match.";
       setFields(nextFields);
@@ -89,15 +86,32 @@ export default function Signup() {
       setSubmitting(true);
       setError("");
       try {
-        await fetch("/api/auth/trainer-signup/", {
+        const formData = new FormData();
+        formData.append("fullName", trainerForm.fullName);
+        formData.append("username", trainerForm.username);
+        formData.append("email", trainerForm.email);
+        formData.append("phone", trainerForm.phone);
+        formData.append("password", trainerForm.password);
+        formData.append("specialization", trainerForm.specialization);
+        formData.append("partnerLgas", JSON.stringify(trainerForm.partnerLgas));
+        formData.append("yearsExperience", trainerForm.yearsExperience);
+        formData.append("bio", trainerForm.bio);
+        formData.append("companyName", trainerForm.companyName);
+        formData.append("numberTrained", trainerForm.numberTrained);
+        if (trainerForm.partnershipLetter) {
+          formData.append("partnershipLetter", trainerForm.partnershipLetter);
+        }
+        const res = await fetch("/api/auth/trainer-signup/", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(trainerForm),
-        }).then(async (res) => {
-          const data = await res.json();
-          if (!res.ok) throw { message: data.error, data };
-          return data;
+          body: formData,
+          credentials: "include",
         });
+        const data = await res.json();
+        if (!res.ok) {
+          const err = new Error(data.error || "Signup failed.");
+          err.data = data;
+          throw err;
+        }
         navigate("/trainer-signup-success");
       } catch (err) {
         setFields(err.data?.fields || {});
@@ -111,11 +125,11 @@ export default function Signup() {
     if (step === 1) {
       const nextFields = {};
       if (form.fullName.trim().split(/\s+/).length < 2) nextFields.fullName = "Enter first and last name.";
+      if (!form.username.trim()) nextFields.username = "Username is required.";
       if (!/^\S+@\S+\.\S+$/.test(form.email)) nextFields.email = "Enter a valid email address.";
       if (!form.phone.trim()) nextFields.phone = "Phone number is required.";
       if (!/^LA\/\d{2}[A-Z]\/\d{4}$/.test(form.nyscStateCode)) nextFields.nyscStateCode = "Format: LA/26B/0123";
-      if (!form.stateOfDeployment) nextFields.stateOfDeployment = "Select your state of deployment.";
-      if (!form.lgaOfDeployment) nextFields.lgaOfDeployment = "Select your LGA of deployment.";
+      if (!form.lgaOfDeployment) nextFields.lgaOfDeployment = "Select your LGA.";
       if (form.password.length < 8) nextFields.password = "Use at least 8 characters.";
       if (form.password !== form.confirmPassword) nextFields.confirmPassword = "Passwords do not match.";
       setFields(nextFields);
@@ -132,7 +146,7 @@ export default function Signup() {
     setSubmitting(true);
     setError("");
     try {
-      await signup({ ...form, role: "corps_member" });
+      await signup({ ...form, role: "corps_member", stateOfDeployment: "Lagos" });
       navigate("/app");
     } catch (err) {
       setFields(err.data?.fields || {});
@@ -152,16 +166,18 @@ export default function Signup() {
       <h1>Create Your Account</h1>
       <p>{role === "corps_member" ? "Join thousands of corps members learning new skills" : "Register your expertise and help corps members learn new skills"}</p>
 
-      <div className="role-selector">
-        <button type="button" className={`role-card ${role === "corps_member" ? "selected" : ""}`} onClick={() => setRole("corps_member")}>
-          <User size={24} />
-          <span>I'm a Corps Member</span>
-        </button>
-        <button type="button" className={`role-card ${role === "trainer" ? "selected" : ""}`} onClick={() => setRole("trainer")}>
-          <GraduationCap size={24} />
-          <span>I'm a Trainer</span>
-        </button>
-      </div>
+      {(step === 1 || role === "trainer") && (
+        <div className="role-selector">
+          <button type="button" className={`role-card ${role === "corps_member" ? "selected" : ""}`} onClick={() => setRole("corps_member")}>
+            <User size={24} />
+            <span>I'm a Corps Member</span>
+          </button>
+          <button type="button" className={`role-card ${role === "trainer" ? "selected" : ""}`} onClick={() => setRole("trainer")}>
+            <GraduationCap size={24} />
+            <span>I'm a Trainer</span>
+          </button>
+        </div>
+      )}
 
       <form className="auth-form" onSubmit={handleSubmit}>
         {role === "trainer" ? (
@@ -171,15 +187,12 @@ export default function Signup() {
               <label>Full Name *
                 <input value={trainerForm.fullName} onChange={(e) => updateTrainer("fullName", e.target.value)} placeholder="Enter your full name" required />
               </label>
-              <label>Specialization/Skill Area *
-                <select value={trainerForm.specialization} onChange={(e) => updateTrainer("specialization", e.target.value)} required>
-                  <option value="">Select your Skill Area</option>
-                  {SKILL_AREAS.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
+              <label>Username *
+                <input value={trainerForm.username} onChange={(e) => updateTrainer("username", e.target.value)} placeholder="Choose a username" required />
               </label>
             </div>
             {fields.fullName && <span className="field-error">{fields.fullName}</span>}
-            {fields.specialization && <span className="field-error">{fields.specialization}</span>}
+            {fields.username && <span className="field-error">{fields.username}</span>}
 
             <div className="form-row">
               <label>Email Address *
@@ -191,6 +204,14 @@ export default function Signup() {
             </div>
             {fields.email && <span className="field-error">{fields.email}</span>}
             {fields.phone && <span className="field-error">{fields.phone}</span>}
+
+            <label>Specialization/Skill Area *
+              <select value={trainerForm.specialization} onChange={(e) => updateTrainer("specialization", e.target.value)} required>
+                <option value="">Select your Skill Area</option>
+                {SKILL_AREAS.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </label>
+            {fields.specialization && <span className="field-error">{fields.specialization}</span>}
 
             <div className="form-row">
               <label>Years of Experience
@@ -224,6 +245,11 @@ export default function Signup() {
               <input value={trainerForm.numberTrained} onChange={(e) => updateTrainer("numberTrained", e.target.value)} placeholder="Enter No of Trained Student" type="number" />
             </label>
 
+            <label>Partnership Letter (PDF/Image) *
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => updateTrainer("partnershipLetter", e.target.files?.[0] || null)} required />
+            </label>
+            {fields.partnershipLetter && <span className="field-error">{fields.partnershipLetter}</span>}
+
             <div className="form-section-title">SECURITY</div>
             <div className="form-row">
               <label>Password *
@@ -238,7 +264,7 @@ export default function Signup() {
             <p className="password-hint">Password must be at least 8 characters, include uppercase, lowercase, numbers, and symbols</p>
 
             <label className="checkbox-label agree-label">
-              <input type="checkbox" required /> I agree to the <Link to="/terms">Terms of Service</Link> and <Link to="/privacy">Privacy Policy</Link>
+              <input type="checkbox" required /> I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
             </label>
 
             {error && <div className="form-error">{error}</div>}
@@ -251,6 +277,11 @@ export default function Signup() {
               <input value={form.fullName} onChange={(e) => update("fullName", e.target.value)} placeholder="Enter your full name" required />
             </label>
             {fields.fullName && <span className="field-error">{fields.fullName}</span>}
+
+            <label>Username *
+              <input value={form.username} onChange={(e) => update("username", e.target.value)} placeholder="Choose a username" required />
+            </label>
+            {fields.username && <span className="field-error">{fields.username}</span>}
 
             <div className="form-row">
               <label>Email Address *
@@ -268,22 +299,12 @@ export default function Signup() {
             </label>
             {fields.nyscStateCode && <span className="field-error">{fields.nyscStateCode}</span>}
 
-            <label>State of Deployment *
-              <select value={form.stateOfDeployment} onChange={(e) => update("stateOfDeployment", e.target.value)} required>
-                <option value="">Select your state</option>
-                {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+            <label>LGA *
+              <select value={form.lgaOfDeployment} onChange={(e) => update("lgaOfDeployment", e.target.value)} required>
+                <option value="">Select your LGA</option>
+                {LAGOS_LGAS.map((lga) => <option key={lga} value={lga}>{lga}</option>)}
               </select>
             </label>
-            {fields.stateOfDeployment && <span className="field-error">{fields.stateOfDeployment}</span>}
-
-            {form.stateOfDeployment && (
-              <label>LGA of Deployment *
-                <select value={form.lgaOfDeployment} onChange={(e) => update("lgaOfDeployment", e.target.value)} required>
-                  <option value="">Select your LGA</option>
-                  {deploymentLgas.map((lga) => <option key={lga} value={lga}>{lga}</option>)}
-                </select>
-              </label>
-            )}
             {fields.lgaOfDeployment && <span className="field-error">{fields.lgaOfDeployment}</span>}
 
             <div className="form-section-title">SECURITY</div>
@@ -300,7 +321,7 @@ export default function Signup() {
             <p className="password-hint">Password must be at least 8 characters, include uppercase, lowercase, numbers, and symbols</p>
 
             <label className="checkbox-label agree-label">
-              <input type="checkbox" required /> I agree to the <Link to="/terms">Terms of Service</Link> and <Link to="/privacy">Privacy Policy</Link>
+              <input type="checkbox" required /> I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
             </label>
 
             {error && <div className="form-error">{error}</div>}
@@ -321,7 +342,7 @@ export default function Signup() {
 
             <div className="form-actions-row">
               <button type="button" className="outline-button" onClick={() => setStep(1)}>← Back</button>
-              <button className="wide-button" disabled={submitting}>{submitting ? "Creating..." : "View Available Trainers →"}</button>
+              <button className="wide-button" disabled={submitting}>{submitting ? "Creating..." : "Continue →"}</button>
             </div>
           </>
         )}

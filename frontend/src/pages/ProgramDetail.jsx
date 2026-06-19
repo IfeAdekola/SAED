@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useMatch, useNavigate, useParams } from "react-router-dom";
 
@@ -31,14 +31,20 @@ export default function ProgramDetail() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+
+  function showMsg(text, type) {
+    setMessage(text);
+    setMessageType(type || "");
+  }
 
   useEffect(() => {
     setDescriptionExpanded(false);
   }, [id]);
 
   const isTrainer = user?.role === "trainer";
-  const canManage = ["admin", "trainer"].includes(user?.role);
+  const canManage = ["saed_admin", "dunis_admin", "trainer"].includes(user?.role);
   const staffProgramView = inApp && canManage;
 
   useEffect(() => {
@@ -53,7 +59,7 @@ export default function ProgramDetail() {
         const match = (data.programs || []).find((item) => String(item.id) === String(id));
         setProgram(match || null);
       } catch (err) {
-        if (active) setMessage(err.message || "Failed to load program.");
+        if (active) showMsg(err.message || "Failed to load program.", "error");
       } finally {
         if (active) setLoading(false);
       }
@@ -101,7 +107,7 @@ export default function ProgramDetail() {
   async function apply() {
     if (!program) return;
     if (authLoading) {
-      setMessage("Checking your account...");
+      showMsg("Checking your account...");
       return;
     }
 
@@ -116,7 +122,7 @@ export default function ProgramDetail() {
       return;
     }
 
-    setMessage("");
+    showMsg("");
     try {
       await api("/applications/create/", {
         method: "POST",
@@ -129,7 +135,7 @@ export default function ProgramDetail() {
       } catch (err) {
         // ignore
       }
-      setMessage("Application submitted.");
+      showMsg("Application submitted.", "success");
       if (!inApp) {
         navigate("/app");
       }
@@ -145,7 +151,7 @@ export default function ProgramDetail() {
         });
         return;
       }
-      setMessage(err.message);
+      showMsg(err.message, "error");
     }
   }
 
@@ -285,7 +291,12 @@ export default function ProgramDetail() {
         </section>
       ) : null}
 
-      {message ? <div className="inline-message">{message}</div> : null}
+      {message ? (
+        <div className={`inline-message inline-message--${messageType || "error"}`}>
+          {message}
+          <button type="button" className="inline-message-close" onClick={() => showMsg("")}><X size={16} /></button>
+        </div>
+      ) : null}
 
       {staffProgramView ? null : (
         <div className="program-detail-footer">

@@ -6,7 +6,15 @@ class Profile(models.Model):
     ROLE_CHOICES = [
         ("corps_member", "Corps Member"),
         ("trainer", "Trainer"),
-        ("admin", "Admin"),
+        ("saed_admin", "SAED Admin"),
+        ("dunis_admin", "Dunis Admin"),
+    ]
+    AUTH_STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("approved", "Approved"),
+        ("declined", "Declined"),
+        ("removed", "Removed"),
+        ("restricted", "Restricted"),
     ]
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -17,9 +25,13 @@ class Profile(models.Model):
     state_of_origin = models.CharField(max_length=80, blank=True)
     lga_of_deployment = models.CharField(max_length=80, blank=True)
     skill_interest = models.CharField(max_length=80, blank=True)
+    skill_interests = models.JSONField(default=list, blank=True)
     is_authorized = models.BooleanField(default=False)
+    authorization_status = models.CharField(max_length=16, choices=AUTH_STATUS_CHOICES, default="pending")
     has_paid = models.BooleanField(default=False)
     authorized_at = models.DateTimeField(null=True, blank=True)
+    is_email_verified = models.BooleanField(default=False)
+    email_verification_token = models.CharField(max_length=64, blank=True)
 
     specialization = models.CharField(max_length=120, blank=True)
     partner_lgas = models.JSONField(default=list, blank=True)
@@ -29,6 +41,22 @@ class Profile(models.Model):
     number_trained = models.PositiveIntegerField(default=0)
     partnership_letter = models.FileField(upload_to="partnership_letters/", blank=True)
     is_verified = models.BooleanField(default=False)
+    has_selected_trainers = models.BooleanField(default=False)
+    can_upload_fast_track = models.BooleanField(default=False)
+    is_busy_corper = models.BooleanField(default=False)
+    payment_verified = models.BooleanField(default=False)
+    payment_reference = models.CharField(max_length=128, blank=True)
+    payment_verified_at = models.DateTimeField(null=True, blank=True)
+    restricted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="restricted_profiles",
+    )
+    restricted_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    profile_picture = models.ImageField(upload_to="profile_pictures/", blank=True)
 
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} ({self.role})"
@@ -50,6 +78,15 @@ class Course(models.Model):
     max_students = models.PositiveIntegerField(default=40)
     is_active = models.BooleanField(default=True)
     has_fast_track = models.BooleanField(default=False)
+    is_restricted = models.BooleanField(default=False)
+    restricted_at = models.DateTimeField(null=True, blank=True)
+    restricted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="restricted_courses",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -107,6 +144,49 @@ class Connection(models.Model):
         return f"{self.corps_member.username} -> {self.trainer.username}"
 
 
+class CourseEnrollment(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("confirmed", "Confirmed"),
+        ("rejected", "Rejected"),
+        ("refunded", "Refunded"),
+    ]
+
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="course_enrollments",
+    )
+    course = models.ForeignKey(
+        "Course",
+        on_delete=models.CASCADE,
+        related_name="enrollments",
+    )
+    payment_reference = models.CharField(max_length=100, blank=True, default="")
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="pending")
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="confirmed_enrollments",
+    )
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    refund_requested = models.BooleanField(default=False)
+    refund_requested_at = models.DateTimeField(null=True, blank=True)
+    refund_processed = models.BooleanField(default=False)
+    refund_processed_at = models.DateTimeField(null=True, blank=True)
+    refund_note = models.TextField(blank=True, default="")
+    enrolled_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ["student", "course"]
+        ordering = ["-enrolled_at"]
+
+    def __str__(self):
+        return f"{self.student.username} -> {self.course.title}"
+
+
 class Program(models.Model):
     CATEGORY_CHOICES = [
         ("agro_allied", "Agro Allied"),
@@ -138,6 +218,15 @@ class Program(models.Model):
     trainer_name = models.CharField(max_length=120)
     location = models.CharField(max_length=120)
     is_active = models.BooleanField(default=True)
+    is_restricted = models.BooleanField(default=False)
+    restricted_at = models.DateTimeField(null=True, blank=True)
+    restricted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="restricted_programs",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -167,3 +256,50 @@ class Application(models.Model):
 
     def __str__(self):
         return f"{self.applicant.username} -> {self.program.title}"
+
+
+class Notification(models.Model):
+    REASON_CHOICES = [
+        ("program_restricted", "Program Restricted"),
+        ("program_unrestricted", "Program Unrestricted"),
+        ("course_restricted", "Course Restricted"),
+        ("course_unrestricted", "Course Unrestricted"),
+        ("connection_request", "Connection Request"),
+        ("connection_approved", "Connection Approved"),
+        ("admin_update", "Admin Update"),
+        ("user_update", "User Update"),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    reason = models.CharField(max_length=32, choices=REASON_CHOICES, default="program_restricted")
+    created_by_role = models.CharField(max_length=20, blank=True, default="")
+    is_read = models.BooleanField(default=False)
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.title} -> {self.user.username}"
+
+
+class Complaint(models.Model):
+    STATUS_CHOICES = [
+        ("open", "Open"),
+        ("resolved", "Resolved"),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="complaints")
+    subject = models.CharField(max_length=200)
+    message = models.TextField()
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="open")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.subject} ({self.user.username})"

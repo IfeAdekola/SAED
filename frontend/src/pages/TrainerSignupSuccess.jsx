@@ -5,7 +5,7 @@ export default function TrainerSignupSuccess() {
   const { user } = useAuth();
 
   return (
-    <div className="auth-page">
+    <main className="auth-page full-width">
       <div className="auth-panel">
         <div className="success-icon">✓</div>
         <h1>Account Created Successfully!</h1>
@@ -28,19 +28,14 @@ export default function TrainerSignupSuccess() {
           <h3>WHAT HAPPENS NEXT</h3>
           <ul>
             <li>Check your email for a verification link. Click to confirm your email address.</li>
-            <li>Log in to your trainer dashboard and start creating courses and connecting with corps members.</li>
+            <li>Wait for NYSC admin to review and approve your registration.</li>
+            <li>Once approved, make the registration payment to activate your account.</li>
+            <li>After activation, you can start creating courses and connecting with corps members.</li>
           </ul>
         </div>
 
         <Link to="/login" className="wide-button">← Back to Login</Link>
       </div>
-      <div className="auth-hero">
-        <div className="auth-hero-content">
-          <span className="auth-hero-icon">👩‍🏫</span>
-          <h2>Share Your Expertise</h2>
-          <p>You're making a real impact! Your training helps corps members develop valuable skills and transform their careers across Lagos State.</p>
-        </div>
-      </div>
-    </div>
+    </main>
   );
 }
