@@ -16,10 +16,11 @@ Separate documentation also exists inside each app folder:
 
 ## Current Access Rules
 
-- Corps members sign up from the public signup page.
+- Corps members sign up from the public signup page with step-by-step registration (name, email, phone, password → state of origin, state of deployment, LGA of deployment).
+- Trainers can self-register at `/trainer-signup` but require admin authorization before accessing most features.
 - All users log in with email and password only. There is no separate admin sign-in tab.
 - Admin accounts still exist, but they use the same login form as every other user.
-- Only admins can create trainer accounts.
+- Admins can authorize/deauthorize trainers from the user management screen.
 - Admins cannot create new admin accounts from the user management screen or API.
 - Only admins can create new SAED programs. Trainers can update programs they are assigned to.
 - Trainers are auto-assigned to programs they should manage via the `trainer` link on the `Program` model.
@@ -29,6 +30,7 @@ Separate documentation also exists inside each app folder:
 - Trainers and admins use `/app/programs` to view program details instead of applying.
 - Admins cannot deactivate or change the role of their own active admin account.
 - Corps members can browse programs, apply, and track their own applications.
+- Unauthorized trainers see a "Account Pending Authorization" page with payment status and a "Pay Authorization Fee" button (scaffolded for future Paystack integration).
 
 ## Project Structure
 
@@ -136,7 +138,7 @@ Supported roles are:
 - Trainer
 - Admin
 
-Corps members can sign up publicly. Trainers are created by admins. Admin accounts are operational accounts and are not created from public signup or trainer management.
+Corps members can sign up publicly with step-by-step registration including Nigerian state and LGA dropdowns. Trainers can self-register at `/trainer-signup` but require admin authorization before accessing most features. Admin accounts are operational accounts and are not created from public signup or trainer management.
 
 Password fields include an eye button for showing or hiding the typed password on login, signup, password reset, and trainer creation forms. The implementation lives in `frontend/src/components/PasswordInput.jsx` and is reused across forms.
 
@@ -204,6 +206,7 @@ Admins can additionally:
 - Create and edit SAED programs (only admins can create; trainers can update programs they are assigned to)
 - Activate or deactivate programs
 - Create trainer accounts
+- Authorize/deauthorize self-registered trainers
 - Activate or deactivate user access
 
 Admins cannot create another admin account through the user management API, and they cannot deactivate or change the role of their own active admin account.
@@ -257,6 +260,11 @@ Fields:
 - `phone`
 - `nysc_state_code`
 - `state_of_deployment`
+- `state_of_origin`: Nigerian state where the corps member is from (used in signup)
+- `lga_of_deployment`: Local Government Area of deployment (used in signup)
+- `is_authorized`: boolean indicating if a trainer account is authorized (default `False` for self-registered trainers, `True` for admin-created trainers)
+- `has_paid`: boolean indicating if the trainer has paid the authorization fee (scaffolded for future Paystack integration)
+- `authorized_at`: timestamp when the trainer was authorized by an admin
 
 #### Program
 
@@ -316,6 +324,7 @@ All backend API routes are under `/api/`.
 | `/api/auth/login/` | POST | Public | Logs in a user with email and password. |
 | `/api/auth/logout/` | POST | Authenticated | Logs out the current user. |
 | `/api/auth/signup/` | POST | Public | Creates a corps member account and profile. |
+| `/api/auth/trainer-signup/` | POST | Public | Creates a trainer account (requires admin authorization). |
 | `/api/auth/password-reset/` | POST | Public | Requests a password reset payload (uid/token). |
 | `/api/auth/password-reset/confirm/` | POST | Public | Confirms a password reset. |
 | `/api/dashboard/` | GET | Authenticated | Returns dashboard statistics, featured programs, recent applications, and (for trainers) their assigned programs. |
@@ -324,8 +333,8 @@ All backend API routes are under `/api/`.
 | `/api/applications/create/` | POST | Corps Member | Creates an application for a program. Trainers and admins are rejected. |
 | `/api/manage/users/` | GET | Admin | Lists all users. |
 | `/api/manage/users/` | POST | Admin | Creates a trainer account only. |
-| `/api/manage/users/<id>/` | PATCH | Admin | Updates profile fields, corps member/trainer role, or active status. Self role changes and self deactivation are blocked. |
-| `/api/manage/programs/` | GET | Admin/Trainer | Lists programs (admins see all; trainers see only their assigned programs). Response also includes `trainers` (active trainer users) and `categories`. |
+| `/api/manage/users/<id>/` | PATCH | Admin | Updates profile fields, corps member/trainer role, active status, or authorization status. Self role changes and self deactivation are blocked. |
+| `/api/manage/programs/` | GET | Admin/Trainer | Lists programs (admins see all; trainers see only their assigned programs). Response also includes `trainers` (authorized trainer users) and `categories`. |
 | `/api/manage/programs/` | POST | Admin | Creates a program. Trainers are rejected. |
 | `/api/manage/programs/<id>/` | PATCH | Admin/Trainer | Updates a program. Trainers can only update their assigned programs. |
 | `/api/manage/applications/` | GET | Admin/Trainer | Lists applications (admins see all; trainers see only their assigned programs). |
@@ -439,6 +448,7 @@ The frontend uses `HashRouter`, so browser URLs may include `#/`.
 | `/forgot` | Public | Forgot password page. |
 | `/login` | Public | Email/password login page. |
 | `/signup` | Public | Corps member signup page. |
+| `/trainer-signup` | Public | Trainer self-registration page. |
 | `/programs` | Public | Public program browsing page. |
 | `/app` | Protected | User dashboard. |
 | `/app/programs` | Protected | Program browsing with application actions (corps member) or detail viewing (admin/trainer). |
@@ -589,6 +599,16 @@ Completed work:
 27. Added comprehensive responsive CSS across breakpoints at 1024px, 768px, 480px, and 360px covering all pages (floating nav, hero, stats band, grids, dashboard sidebar, forms, modals, auth pages, and more).
 28. Fixed hero background image path (replaced broken `../public/` CSS reference with a pure CSS gradient).
 29. Added `prefers-reduced-motion`, landscape, and print media queries for accessibility.
+30. Added trainer self-registration at `/trainer-signup` with authorization flow.
+31. Added `is_authorized`, `has_paid`, and `authorized_at` fields to Profile model.
+32. Added `state_of_origin` and `lga_of_deployment` fields to Profile model.
+33. Added `require_authorized_trainer` decorator to block unauthorized trainers from dashboard, manage programs, and manage applications endpoints.
+34. Added admin authorization/deauthorization of trainers from `/app/users`.
+35. Added "Account Pending Authorization" page for unauthorized trainers with payment status and "Pay Authorization Fee" button (scaffolded).
+36. Redesigned corps member signup flow: step 1 (name, email, phone, password), step 2 (state of origin, state of deployment, LGA of deployment dropdowns).
+37. Created `frontend/src/data/nigerianStates.js` with complete dataset of all 37 Nigerian states and their 774 LGAs.
+38. Added NYSC State Code text input field to corps member signup form, positioned before State of Deployment.
+39. Updated Django admin `ProfileAdmin` to use dynamic `get_fieldsets()` that shows role-specific fields: Authorization section for trainers, Corps Member Details section for corps members.
 
 ## Production Notes
 

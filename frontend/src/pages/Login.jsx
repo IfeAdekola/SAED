@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, User, GraduationCap } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
@@ -19,7 +19,7 @@ export default function Login() {
   async function handleSubmit(event) {
     event.preventDefault();
     const nextFields = {};
-    if (!/^\S+@\S+\.\S+$/.test(form.email)) nextFields.email = "Enter a valid email address.";
+    if (!form.email.trim()) nextFields.email = "Username or email is required.";
     if (!form.password) nextFields.password = "Password is required.";
     setFields(nextFields);
     if (Object.keys(nextFields).length) return;
@@ -27,7 +27,13 @@ export default function Login() {
     setSubmitting(true);
     setError("");
     try {
-      await login(form);
+      const loggedUser = await login(form);
+      if (loggedUser && loggedUser.role === "trainer") {
+        if (!loggedUser.isAuthorized || !loggedUser.isActive) {
+          navigate("/inactive-account", { replace: true });
+          return;
+        }
+      }
       if (location.state?.pendingProgramId) {
         try {
           await api("/applications/create/", {
@@ -41,7 +47,8 @@ export default function Login() {
           if (!err.message?.includes("already applied")) throw err;
         }
       }
-      navigate(location.state?.redirectTo || "/app", { replace: true });
+      const dest = location.state?.redirectTo || (loggedUser.role === "dunis_admin" ? "/app/dunis-admin" : "/app");
+      navigate(dest, { replace: true });
     } catch (err) {
       setFields(err.data?.fields || {});
       setError(err.message);
@@ -55,37 +62,33 @@ export default function Login() {
       <Link className="back-link" to="/"><ArrowLeft size={16} /> Back</Link>
       <h1>Welcome Back</h1>
       <p>Login to access your account</p>
-      <div className="role-toggle" role="tablist" aria-label="Account type">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={form.role === "trainer"}
-          className={form.role === "trainer" ? "active" : ""}
-          onClick={() => setForm({ ...form, role: "trainer" })}
-        >
-          I'm a Trainer
+
+      <div className="role-selector">
+        <button type="button" className={`role-card ${form.role === "corps_member" ? "selected" : ""}`} onClick={() => setForm({ ...form, role: "corps_member" })}>
+          <User size={24} />
+          <span>I'm a Corps Member</span>
         </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={form.role === "corps_member"}
-          className={form.role === "corps_member" ? "active" : ""}
-          onClick={() => setForm({ ...form, role: "corps_member" })}
-        >
-          I'm a Corps Member
+        <button type="button" className={`role-card ${form.role === "trainer" ? "selected" : ""}`} onClick={() => setForm({ ...form, role: "trainer" })}>
+          <GraduationCap size={24} />
+          <span>I'm a Trainer</span>
         </button>
       </div>
+
       <form className="auth-form" onSubmit={handleSubmit}>
-        <label>Email Address<input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Enter your Email Address" type="email" required /></label>
+        <label>Username or Email *
+          <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Enter your username or email" required />
+        </label>
         {fields.email && <span className="field-error">{fields.email}</span>}
-        <label>Password<PasswordInput value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Enter your Password" required /></label>
+        <label>Password *
+          <PasswordInput value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Enter your Password" required />
+        </label>
         {fields.password && <span className="field-error">{fields.password}</span>}
         <div className="form-row">
           <label className="checkbox-label"><input type="checkbox" checked={form.remember} onChange={(e) => setForm({ ...form, remember: e.target.checked })} /> Remember me</label>
           <Link to="/forgot">Forget Password?</Link>
         </div>
         {error && <div className="form-error">{error}</div>}
-        <button className="wide-button" disabled={submitting}>{submitting ? "Logging in..." : "Login"}</button>
+        <button className="wide-button" disabled={submitting}>{submitting ? "Logging in..." : "Login →"}</button>
       </form>
       <p className="auth-switch">Don't have an account? <Link to="/signup">Sign Up</Link></p>
     </AuthFrame>
@@ -94,11 +97,11 @@ export default function Login() {
 
 export function AuthFrame({ children }) {
   return (
-    <main className="auth-page">
+    <main className="auth-page full-width">
       <div className="auth-top">
         <DarkToggle />
       </div>
-      <section className="auth-panel">{children}</section>
+      <div className="auth-panel">{children}</div>
     </main>
   );
 }

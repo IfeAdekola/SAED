@@ -1,4 +1,4 @@
-import { CheckCircle2, CircleSlash, FileCheck2 } from "lucide-react";
+import { CheckCircle2, CircleSlash, FileCheck2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -18,6 +18,12 @@ export default function ManageApplications() {
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
+
+  function showMsg(text, type) {
+    setMessage(text);
+    setMessageType(type || "");
+  }
 
   async function load() {
     const data = await api("/manage/applications/");
@@ -28,7 +34,7 @@ export default function ManageApplications() {
     load()
       .catch((err) => {
         if (err.status === 401) navigate("/login", { replace: true });
-        else setMessage(err.message);
+        else showMsg(err.message, "error");
       })
       .finally(() => setLoading(false));
   }, [navigate]);
@@ -36,7 +42,7 @@ export default function ManageApplications() {
   // Completed applications can only be changed by an admin. Trainers see
   // read-only action buttons, while admins can still approve, decline, or
   // re-mark the application as completed.
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "saed_admin" || user?.role === "dunis_admin";
 
   function isActionDisabled(item, status) {
     if (item.status === status) return true;
@@ -45,13 +51,13 @@ export default function ManageApplications() {
   }
 
   async function updateStatus(id, status) {
-    setMessage("");
+    showMsg("");
     try {
       await api(`/manage/applications/${id}/`, { method: "PATCH", body: { status } });
       await load();
-      setMessage("Application updated.");
+      showMsg("Application updated.", "success");
     } catch (err) {
-      setMessage(err.message);
+      showMsg(err.message, "error");
     }
   }
 
@@ -64,7 +70,12 @@ export default function ManageApplications() {
         </div>
       </div>
 
-      {message && <div className="inline-message">{message}</div>}
+      {message && (
+        <div className={`inline-message inline-message--${messageType || "error"}`}>
+          {message}
+          <button type="button" className="inline-message-close" onClick={() => showMsg("")}><X size={16} /></button>
+        </div>
+      )}
       <div className="filter-row">
         <div className="filter-label">Filter:</div>
         <div className="filter-buttons">

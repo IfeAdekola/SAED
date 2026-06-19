@@ -1,4 +1,4 @@
-import { Edit3, PlusCircle, X } from "lucide-react";
+import { Edit3, PlusCircle, X, Ban, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -25,7 +25,13 @@ export default function ProgramEditor() {
   const [form, setForm] = useState(blankProgram);
   const [fields, setFields] = useState({});
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
   const [editorOpen, setEditorOpen] = useState(false);
+
+  function showMsg(text, type) {
+    setMessage(text);
+    setMessageType(type || "");
+  }
 
   async function load() {
     const data = await api("/manage/programs/");
@@ -37,7 +43,7 @@ export default function ProgramEditor() {
   useEffect(() => {
     load().catch((err) => {
       if (err.status === 401) navigate("/login", { replace: true });
-      else setMessage(err.message);
+      else showMsg(err.message, "error");
     });
   }, [navigate]);
 
@@ -74,7 +80,7 @@ export default function ProgramEditor() {
 
   async function save(event) {
     event.preventDefault();
-    setMessage("");
+    showMsg("");
     if (!validate()) return;
     const method = selectedId === "new" ? "POST" : "PATCH";
     const path = selectedId === "new" ? "/manage/programs/" : `/manage/programs/${selectedId}/`;
@@ -85,10 +91,22 @@ export default function ProgramEditor() {
       setForm({ ...data.program, trainerId: data.program.trainerId || "" });
       setFields({});
       setEditorOpen(false);
-      setMessage("Program saved.");
+      showMsg("Program saved.", "success");
     } catch (err) {
       setFields(err.data?.fields || {});
-      setMessage(err.message);
+      showMsg(err.message, "error");
+    }
+  }
+
+  async function toggleRestrict(program) {
+    const action = program.isRestricted ? "unrestrict" : "restrict";
+    if (!confirm(`Are you sure you want to ${action} this program?`)) return;
+    try {
+      await api(`/manage/programs/${program.id}/${action}/`, { method: "POST" });
+      await load();
+      showMsg(`Program ${action}ed successfully.`, "success");
+    } catch (err) {
+      showMsg(err.message || `Failed to ${action} program`, "error");
     }
   }
 
@@ -102,7 +120,12 @@ export default function ProgramEditor() {
         <button className="primary-button" onClick={() => chooseProgram("new")} type="button"><PlusCircle size={16} /> New Program</button>
       </div>
 
-      {message && <div className="inline-message">{message}</div>}
+      {message && (
+        <div className={`inline-message inline-message--${messageType || "error"}`}>
+          {message}
+          <button type="button" className="inline-message-close" onClick={() => showMsg("")}><X size={16} /></button>
+        </div>
+      )}
 
       <div className="program-admin-grid">
         {programs.map((program) => (
@@ -120,9 +143,14 @@ export default function ProgramEditor() {
             </dl>
             <div className="program-admin-card-actions">
               <span className={`status-pill status-${program.isActive ? "approved" : "declined"}`}>{program.isActive ? "Active" : "Inactive"}</span>
+              {program.isRestricted && <span className="status-pill status-restricted">Restricted</span>}
               <button className="icon-action" onClick={() => chooseProgram(String(program.id))} type="button">
                 <Edit3 size={16} />
                 <span>Edit</span>
+              </button>
+              <button className="icon-action" onClick={() => toggleRestrict(program)} type="button" title={program.isRestricted ? "Unrestrict" : "Restrict"}>
+                {program.isRestricted ? <ShieldAlert size={16} /> : <Ban size={16} />}
+                <span>{program.isRestricted ? "Unrestrict" : "Restrict"}</span>
               </button>
             </div>
           </article>

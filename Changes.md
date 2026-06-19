@@ -1,76 +1,71 @@
-## Completed Improvements
+# Change Log
 
-Implemented in this update:
+## June 2026
 
-1. Added trainer and admin management pages.
-2. Allowed admins or trainers to approve, decline, and complete applications.
-3. Added program creation and editing screens.
-4. Added password reset functionality.
-5. Added stronger production settings for secrets, allowed hosts, database, and deployment.
-6. Added automated backend and frontend tests.
-7. Added form validation improvements and clearer error messages.
+### Bug Fixes
 
-## 2026-06-08 — Application immutability & UI filters
+- **api.js FormData support**: `api()` now detects `FormData` instances and skips JSON serialization + Content-Type header, allowing file uploads (profile pictures, partnership letters) to work correctly.
+- **TrainerSelection double JSON stringify**: Fixed `body: JSON.stringify({ trainerIds: selected })` → `body: { trainerIds: selected }` which was being double-stringified by the `api()` wrapper.
+- **TrainerSignup wrong navigation**: After trainer signup, now navigates to `/trainer-signup-success` instead of `/app` where unauthorized trainers see the access-denied page.
+- **MyTrainers price comparison**: Fixed `course.price === "0"` → `Number(course.price) === 0` to correctly show "Free" for zero-price courses regardless of string/number type.
+- **ManageUsers.test button regex**: Fixed test searching for `/add user/i` → `/add trainer/i` to match actual button text.
+- **Test login assertion**: Fixed test expecting role `"admin"` → `"saed_admin"` to match renamed role.
+- **Test trainer dashboard**: Removed assertion checking for `applications` key in dashboard payload (not included in `program_payload`).
+- **select_trainers profile null check**: Added guard for missing profile to prevent `RelatedObjectDoesNotExist` crash.
+- **CSS z-index fix**: Changed `.modal-overlay` z-index from 100 → 200 so modals appear above the floating nav (z-index: 120).
+- **CSS duplicate --nav-bg**: Removed duplicate `--nav-bg: #000` declaration in dark mode, keeping the semi-transparent value for backdrop blur.
+- **Admin route protection**: Added `roles={["saed_admin", "dunis_admin"]}` to `/admin/dashboard` route.
+- **404 route**: Added catch-all route showing "Page Not Found" message.
 
-- Once an application is marked `completed`, its status is immutable via the API and the Django admin UI.
-- Django admin actions now skip completed applications and render the `status` field readonly when viewing completed applications.
-- Frontend: added a `Pending` filter and filters for Approved/Declined/Completed on `/app/manage-applications`; action buttons are disabled for completed applications and new CSS classes were added for the filter controls.
+- **Role rename `admin` → `saed_admin`**: Full stack rename across models.py, views.py (9 locations), tests.py, seed_saed.py, and all frontend files. Migration 0014 includes data migration to update existing records.
+- **MyTrainers double JSON stringify**: Fixed `body: JSON.stringify({ trainerId })` → `body: { trainerId }` which was being double-stringified by the `api()` wrapper.
+- **MyTrainers typo**: Fixed `user?.lgaOfDeploment` → `user?.lgaOfDeployment`.
+- **FindTrainers unused import**: Removed unused `STATES` import from `nigerianStates.js`.
+- **Signup.jsx raw fetch**: Added `credentials: "include"` and proper Error object throwing instead of plain object.
+- **EditProfile message-dismiss class**: Changed `className="message-dismiss"` → `className="inline-message-close"` to match CSS definition.
+- **AppShell "Welcome, undefined"**: Added loading guard and null user check. Component now returns loading state while auth initializes.
+- **AppShell handleLogout**: Added try/catch to prevent navigate from being skipped on logout failure.
+- **auth.jsx unhandled rejection**: Added `.catch(() => {})` to initial `/auth/me/` session check.
+- **api.js CSRF error handling**: Added try/catch in `ensureCsrf()` to prevent crashed mutating requests when CSRF endpoint is unreachable.
+- **api.js lockedBase**: After first successful request, locks to that base to avoid re-iterating all 8 API_BASES on every call and losing session cookie context.
+- **views.py program_list crash**: Added null check for `request.user.profile` to prevent `RelatedObjectDoesNotExist` crash.
+- **views.py name split IndexError**: Fixed `full_name.split(" ", 1)[1]` to include `if " " in full_name else ""` guard.
+- **views.py unguarded int()**: Added `_safe_int()` helper for `trainer_signup_view` and `manage_fast_track_videos` to prevent `ValueError` on non-numeric input.
+- **views.py paystack auth**: Added `@api_login_required` to `paystack_initialize` endpoint to prevent anonymous payment reference creation.
+- **views.py password reset**: Fixed potential `NameError` on `reset_payload` when user doesn't exist by initializing as empty dict.
+- **styles.css inline-message base**: Separated `.form-error` and `.inline-message` base rules so `.inline-message` without a modifier no longer inherits error colors.
 
-## 2026-06-08 — Trainer-assigned programs & activity detail
+### New Features & Improvements
 
-- `Program` model gained a nullable `trainer` foreign key to the Django `User` model (migration `0003_program_trainer`).
-- `/api/manage/programs/` now returns the list of active trainer users and the list of program categories alongside the programs.
-- `/api/manage/programs/` `POST` is now admin-only; trainers can only update programs they are assigned to.
-- Trainers see only their assigned programs and applications across the API, dashboard, and the relevant pages.
-- `seed_saed` now assigns the demo trainer account to every seeded program.
-- Added a dedicated `/activities/:id` detail page that reuses the `CampActivities` grid component.
+- **DunisAdmin page** (`/app/dunis-admin`): New admin interface for managing payments and fast track access. Shows all trainers and corps members with confirm payment, enable/disable fast track, and record management.
+- **Complaint system**: Corps members can submit complaints to DUNIS admin via modal in AppShell. Complaints stored in new `Complaint` model.
+- **Notification system**: In-app notifications for program restrictions, connection requests, connection approvals, and admin updates. Non-admin users do not see `admin_update` notifications.
+- **Course management**: Trainers can create/edit/delete courses with auto-calculated dates (start, end, duration). Grid layout with fast track toggle.
+- **Fast Track Videos**: Trainers can upload/manage video content for courses. Duration auto-fetch from YouTube/Vimeo URLs.
+- **Trainer selection**: Corps members can select trainers during onboarding based on skill interest and LGA.
+- **Connection system**: Corps members can connect with trainers. Notifications sent on request and approval.
+- **Payment integration**: Paystack initialization and verification endpoints. Activation box with payment button for unauthorized trainers.
+- **Activation box restructured**: Shows only when `!user?.hasPaid && !user?.paymentVerified`. Two-box layout with payment text and button.
+- **Seed data improved**: Trainer is now authorized with `has_paid=True` and `payment_verified=True`. Added seeded corps member (`member@saed.test` / `password123`) for testing corps member flows.
+- **BrowserRouter**: Switched from `HashRouter` to `BrowserRouter` for cleaner URLs.
+- **Admin routes hidden**: Removed visible admin links from Login page. Admin routes kept undiscoverable.
+- **Course date auto-calculation**: `_resolve_course_dates()` helper parses strings→dates and computes missing third value.
+- **Sortable table columns**: `ManageUsers.jsx` client-side sorting on Name, Specialization, LGA, Status.
+- **Notification clickability**: Both `AppShell.jsx` and `Dashboard.jsx` notification items clickable.
+- **Back link for trainers**: "Back to Courses" link in course management.
+- **Message system**: All pages now use typed messages (`messageType`: "success"/"error") with dismiss button and appropriate green/red styling.
+- **CSS dark mode**: Added dark mode variants for `inline-message--success`, `inline-message--error`, `dunis-record-card`, `dunis-confirm-btn`, `dunis-toggle-btn`.
+- **setupProxy.js**: Created `frontend/src/setupProxy.js` with `http-proxy-middleware` for proper session cookie forwarding. Uses `cookieDomainRewrite` and `onProxyRes` to strip `Domain=` from Set-Cookie headers. Removed conflicting `"proxy"` field from `package.json`.
+- **Models expanded**: Added `updated_at`, `profile_picture`, `specialization`, `partner_lgas`, `years_experience`, `bio`, `company_name`, `number_trained`, `partnership_letter`, `is_verified`, `has_selected_trainers`, `can_upload_fast_track`, `is_busy_corper`, `payment_verified`, `payment_reference`, `payment_verified_at`, `authorization_status` to Profile. Added `is_restricted`, `restricted_at`, `restricted_by` to Program. Added `has_fast_track` to Course. Added `Notification` and `Complaint` models.
+- **Trainer signup fixed**: Backend no longer requires `specialization`, `partnerLgas`, `partnershipLetter` at signup — all optional, completable via EditProfile.
 
-## 2026-06-09 — Documentation refresh
+### Documentation Updates
 
-- `README.md`: corrected backend stack to Django 6, fixed the venv path (`backend/venv/`), and clarified the local run/test commands.
-- `documentation.md`: added the `Program.trainer` foreign key, documented the `/api/manage/programs/` `trainers` payload, restricted program creation to admins, added `/activities/:id` to the route table, and recorded recent completed work.
-- `backend/documentation.md`: documented the new `trainer` field and its reverse name, the `Program` payload (including `trainerId`/`trainerName`/`availableSlots`), trainer-scoped program/application endpoints, the immutability of completed applications, and the demo-trainer assignment in `seed_saed`.
-- `frontend/documentation.md`: documented the `PasswordInput` and `CampActivities` reusable components, the new `/activities/:id` route, the admin-only `/app/program-editor` route, trainer-scoped program views, the trainer dashboard `trainerPrograms` section, and the new frontend test files.
-- `Changes.md`: added this entry.
-
-## 2026-06-09 — Completed applications: admin-only override
-
-- Backend (`backend/saed/views.py`): the `PATCH /api/manage/applications/<id>/` endpoint now only blocks non-admin staff (trainers) from changing a `completed` application. Admins can still update or revert a completed application's status.
-- Backend tests (`backend/saed/tests.py`): added `test_trainer_cannot_change_completed_application` (verifies trainer PATCH is rejected with `400` and the status stays `completed`) and `test_admin_can_change_completed_application` (verifies admin PATCH succeeds and the status is updated). All 21 backend tests pass.
-- Frontend (`frontend/src/pages/ManageApplications.jsx`): action buttons for completed applications are now only disabled for trainers; admins see the row's `Approve` and `Decline` buttons enabled (the redundant `Complete` button stays disabled because the row is already `completed`). The component reads the current role from `useAuth`.
-- Frontend tests (`frontend/src/pages/ManageApplications.test.jsx`): updated to mock `useAuth` and added two new tests covering the trainer-disabled and admin-enabled cases for completed applications.
-- Documentation: updated `documentation.md`, `backend/documentation.md`, and `frontend/documentation.md` to describe the new admin-override rule (Program Applications section, API table, `Application status rules`, `Role-Based Screens`, Testing Checklist, and Current Progress item 24).
-
-## 2026-06-13 — Card description truncation
-
-- Programs, Opportunities, and Camp Activities cards now show only the first sentence of descriptions.
-- Full descriptions are still available on the detail pages (`/programs/:id`, `/activities/:id`, and the external opportunity links).
-- A shared `firstSentence()` helper extracts the first sentence using a period-delimited regex; falls back to 120 characters with an ellipsis if no period is found.
-
-## 2026-06-13 — Real NYSC opportunity listings
-
-- Replaced the Opportunities page static data with 48 real, verified NYSC opportunity listings sourced from LinkedIn, MyJobMag, Jobberman, JobNow, NYSC Portal, and company career pages.
-- Listings cover entry-level positions, internships, graduate trainee programmes, and PPA opportunities across Lagos, Abuja, Port Harcourt, Benin City, Edo, and nationwide.
-- Sectors include tech/IT, finance/accounting, law, engineering/energy, professional services, marketing/sales, real estate, healthcare, oil & gas, and education.
-- Each listing links to the original job posting for direct application.
-
-## 2026-06-13 — Full site responsive redesign
-
-- Added comprehensive responsive CSS with breakpoints at 1024px, 768px, 480px, and 360px covering every page of the site.
-- **FloatingNav**: Shrinks on mobile, hamburger menu appears at ≤680px, ultra-compact layout at ≤360px.
-- **Hero section**: Stacks buttons vertically, reduces heading and padding on small screens, min-height scales from 700px down to 480px.
-- **Stats band**: 3 columns on desktop, single column on mobile.
-- **Feature/program/activity/opportunity grids**: Gracefully cascade from 3 columns to 2 to 1.
-- **Dashboard sidebar**: Becomes a sticky top bar with hamburger toggle on mobile.
-- **Forms and management rows**: Stack to single-column layouts on narrow screens.
-- **Modals**: Full-width with reduced padding on small screens.
-- **Auth pages**: Panel fills screen width on mobile with tighter padding.
-- **Activity detail and program detail**: Single-column layouts, reduced image heights, smaller fonts on mobile.
-- **Category tabs**: Horizontal scroll with snap on mobile instead of wrapping.
-- Added `prefers-reduced-motion` media query to disable hover animations for accessibility.
-- Added landscape phone and print media queries.
-- Fixed hero background image path (was referencing `../public/` which fails in CRA builds; replaced with a pure CSS gradient).
-
-## 2026-06-13 — Documentation update
-
-- Updated `README.md`, `documentation.md`, `frontend/documentation.md`, and `Changes.md` to reflect card truncation, real opportunity listings, responsive redesign, and hero image fix.
+- Updated all role references from `admin` to `saed_admin` across README.md and backend/documentation.md.
+- Added DUNIS Admin role description and access rules.
+- Added new API endpoints table entries for courses, fast track, connections, notifications, complaints, and payments.
+- Added model documentation for Course, FastTrackVideo, Connection, Notification, and Complaint.
+- Added Profile field documentation for all new fields.
+- Updated Program model documentation with `is_restricted`, `restricted_at`, `restricted_by` fields.
+- Updated proxy description to reference `setupProxy.js`.
+- Created this Changes.md file.

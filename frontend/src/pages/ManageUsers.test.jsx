@@ -17,7 +17,7 @@ test("shows validation errors before creating a user", async () => {
     root.render(<MemoryRouter><ManageUsers /></MemoryRouter>);
   });
 
-  const addButton = [...container.querySelectorAll("button")].find((button) => button.textContent.match(/add user/i));
+  const addButton = [...container.querySelectorAll("button")].find((button) => button.textContent.match(/add trainer/i));
   await act(async () => {
     addButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });

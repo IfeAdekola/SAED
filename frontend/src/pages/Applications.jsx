@@ -1,4 +1,4 @@
-import { Clock3, FileText } from "lucide-react";
+import { Clock3, FileText, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -11,7 +11,8 @@ export default function Applications() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const canManage = ["admin", "trainer"].includes(user?.role);
+  const [messageType, setMessageType] = useState("");
+  const canManage = ["saed_admin", "dunis_admin", "trainer"].includes(user?.role);
 
   useEffect(() => {
     setLoading(true);
@@ -29,10 +30,15 @@ export default function Applications() {
           navigate("/login", { replace: true });
           return;
         }
-        setError(err.message);
+        showMsg(err.message, "error");
       })
       .finally(() => setLoading(false));
   }, [canManage, navigate]);
+
+  function showMsg(text, type) {
+    setError(text);
+    setMessageType(type || "");
+  }
 
   const groupedApplications = applications.reduce((groups, item) => {
     const key = item.program.title;
@@ -51,7 +57,12 @@ export default function Applications() {
         {!canManage ? <Link to="/app/programs">Browse programs</Link> : null}
       </div>
 
-      {error && <div className="inline-message">{error}</div>}
+      {error && (
+        <div className={`inline-message inline-message--${messageType || "error"}`}>
+          {error}
+          <button type="button" className="inline-message-close" onClick={() => showMsg("")}><X size={16} /></button>
+        </div>
+      )}
       {loading ? <div className="empty-state">Checking your applications...</div> : null}
 
       {!loading && !applications.length ? (

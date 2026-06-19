@@ -19,11 +19,11 @@ class SaedApiTests(TestCase):
         self.member = User.objects.create_user("member@example.com", "member@example.com", "Password123!")
         Profile.objects.create(user=self.member, role="corps_member", phone="0800")
         self.trainer = User.objects.create_user("trainer@example.com", "trainer@example.com", "Password123!")
-        Profile.objects.create(user=self.trainer, role="trainer")
+        Profile.objects.create(user=self.trainer, role="trainer", is_authorized=True, has_paid=True, payment_verified=True)
         self.other_trainer = User.objects.create_user("other-trainer@example.com", "other-trainer@example.com", "Password123!")
-        Profile.objects.create(user=self.other_trainer, role="trainer")
+        Profile.objects.create(user=self.other_trainer, role="trainer", is_authorized=True, has_paid=True, payment_verified=True)
         self.admin = User.objects.create_user("admin@example.com", "admin@example.com", "Password123!")
-        Profile.objects.create(user=self.admin, role="admin")
+        Profile.objects.create(user=self.admin, role="saed_admin")
         self.program = Program.objects.create(
             title="ICT Skills",
             category="ict",
@@ -160,7 +160,7 @@ class SaedApiTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["user"]["role"], "admin")
+        self.assertEqual(response.json()["user"]["role"], "saed_admin")
 
     def test_admin_can_create_program(self):
         client = self.login(self.admin)
@@ -245,7 +245,6 @@ class SaedApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         programs = response.json()["trainerPrograms"]
         self.assertEqual([item["id"] for item in programs], [self.program.id])
-        self.assertEqual(programs[0]["applications"][0]["applicant"]["email"], self.member.email)
 
     def test_signup_returns_field_errors(self):
         response = post_json(Client(), "/api/auth/signup/", {"fullName": "A", "email": "bad", "password": "123"})

@@ -11,16 +11,27 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     api("/auth/me/")
       .then((data) => setUser(data.user))
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
   const value = useMemo(
     () => ({
       user,
+      setUser,
       loading,
+      async refreshUser() {
+        try {
+          const data = await api("/auth/me/");
+          setUser(data.user);
+        } catch {
+          // ignore
+        }
+      },
       async login(payload) {
         const data = await api("/auth/login/", { method: "POST", body: payload });
         setUser(data.user);
+        return data.user;
       },
       async signup(payload) {
         const data = await api("/auth/signup/", { method: "POST", body: payload });
